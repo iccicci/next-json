@@ -1,0 +1,20 @@
+{
+  "cSpell.words": ["daniele", "linebreak", "njson", "nonblock", "nonwords", "parens", "pegjs", "precoverage", "ricci", "rmzrtb", "satoshis", "tspegjs"],
+  "editor.codeActionsOnSave": ["source.formatDocument", "source.fixAll.eslint"],
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "eslint.alwaysShowStatus": true,
+  "eslint.debug": true,
+  "eslint.validate": ["javascript", "typescript"],
+  "explorer.confirmDelete": false,
+  "files.autoSave": "off",
+  "files.eol": "\n",
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+  "git.ignoreMissingGitWarning": true,
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.validate.enable": true,
+  "window.zoomLevel": 0,
+  "[javascript]": { "editor.formatOnSave": false },
+  "[typescript]": { "editor.formatOnSave": false }
+}

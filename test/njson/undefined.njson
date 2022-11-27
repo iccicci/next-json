@@ -1,0 +1,7 @@
+// njson
+{
+  "undefined": /*
+  null
+  */ undefined,
+  "array": [     undefined,null,      undefined      ]
+}

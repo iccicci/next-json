@@ -1,0 +1,35 @@
+---
+checks:
+  file-lines:
+    config:
+      threshold: 500
+  method-complexity:
+    config:
+      threshold: 60
+  method-count:
+    config:
+      threshold: 35
+  method-lines:
+    config:
+      threshold: 100
+  return-statements:
+    config:
+      threshold: 20
+  similar-code:
+    config:
+      threshold: 60
+engines:
+  duplication:
+    enabled: true
+    config:
+      languages:
+        - typescript
+  eslint:
+    enabled: true
+    channel: eslint-8
+  fixme:
+    enabled: true
+ratings:
+  paths:
+    - "*.ts"
+    - "test/*.ts"

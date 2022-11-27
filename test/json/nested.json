@@ -1,0 +1,5 @@
+{
+  "array": [1, 2, null, "njson"],
+  "null": null,
+  "object": { "njson": true, "false": false }
+}

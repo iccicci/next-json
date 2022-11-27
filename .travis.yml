@@ -1,0 +1,22 @@
+after_script:
+  - "if [[ `node --version` =~ ^v18 ]] ; then ./cc-test-reporter after-build --exit-code $TRAVIS_TEST_RESULT ; fi"
+
+before_script:
+  - "curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter"
+  - "chmod +x ./cc-test-reporter"
+  - "./cc-test-reporter before-build"
+
+dist: focal
+
+env:
+  global:
+    - CC_TEST_REPORTER_ID=a281914704c38b1935ba49f902704cfb204b6c72b2f067f27b250648e6532274
+
+node_js:
+  - "18"
+  - "16"
+  - "14"
+
+language: node_js
+script: "npm run coverage"
+sudo: false

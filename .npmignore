@@ -1,0 +1,10 @@
+.*
+Makefile
+coverage
+generate.ts
+index.ts
+jest.config.js
+next-json.pegjs
+parser.ts
+test
+tsconfig.*
