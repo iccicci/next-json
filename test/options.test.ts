@@ -99,11 +99,11 @@ describe("options", () => {
     describe("date", () => {
       const date = new Date("1976-01-23T14:00:00.000Z");
 
-      it("default", () => expect(NJSON.stringify(date)).toBe("Date(191253600000)"));
-      it("iso", () => expect(NJSON.stringify(date, { date: "iso" })).toBe('Date("1976-01-23T14:00:00.000Z")'));
-      it("string", () => expect(NJSON.stringify(date, { date: "string" })).toBe('Date("Fri Jan 23 1976 15:00:00 GMT+0100 (Central European Standard Time)")'));
-      it("time", () => expect(NJSON.stringify(date, { date: "time" })).toBe("Date(191253600000)"));
-      it("utc", () => expect(NJSON.stringify(date, { date: "utc" })).toBe('Date("Fri, 23 Jan 1976 14:00:00 GMT")'));
+      it("default", () => expect(NJSON.stringify(date)).toBe("new Date(191253600000)"));
+      it("iso", () => expect(NJSON.stringify(date, { date: "iso" })).toBe('new Date("1976-01-23T14:00:00.000Z")'));
+      it("string", () => expect(NJSON.stringify(date, { date: "string" })).toBe('new Date("Fri Jan 23 1976 15:00:00 GMT+0100 (Central European Standard Time)")'));
+      it("time", () => expect(NJSON.stringify(date, { date: "time" })).toBe("new Date(191253600000)"));
+      it("utc", () => expect(NJSON.stringify(date, { date: "utc" })).toBe('new Date("Fri, 23 Jan 1976 14:00:00 GMT")'));
     });
   });
 });

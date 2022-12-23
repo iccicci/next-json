@@ -35,7 +35,7 @@ Because JSON is awesome, but...
 
 JSON is awesome mainly for two reasons:
 
-1. it offers an easy way to serialize complex data;
+1. it offers an easy way to serialize and deserialize complex data;
 2. a valid JSON encoded string can be pasted in a JavaScript source file, a really awesome feature while developing / debugging.
 
 ... but it has some limitations:
@@ -50,10 +50,12 @@ This package is intended to offer something as great as JSON... trying to add so
 
 - &#9745; extends JSON
 - &#9745; supports C style comments
-- &#9745; supports `undefined` values
-- &#9745; supports `BigInt` numbers
-- &#9745; supports `Date` objects
-- &#9744; supports `Error` objects
+- &#9745; supports `undefined`
+- &#9745; supports `-0`, `NaN` and `Infinity`
+- &#9745; supports `BigInt`
+- &#9745; supports `Date`
+- &#9745; supports `RegExp`
+- &#9744; supports `Error`
 - &#9744; supports circular references
 
 ## NJSON extends JSON
@@ -73,6 +75,17 @@ npm install --save next-json
 ```
 
 # Usage
+
+### JavaScript
+
+```javascript
+import { NJSON, NjsonParseOptions, NjsonStringifyOptions } from "next-json";
+
+const serialized = NJSON.stringify({ some: "value" });
+const deserialized = NJSON.parse(serialized);
+```
+
+### TypeScript
 
 ```typescript
 import { NJSON, NjsonParseOptions, NjsonStringifyOptions } from "next-json";
@@ -146,10 +159,10 @@ parameter of `JSON.parse`.
 Specifies the method of `Date` objects used to serialize them. Follows the list of the allowed values and the relative
 method used.
 
-- `"iso"`: `toISOString`
-- `"string"`: `toString`
-- `"time"`: `getTime` - the default
-- `"utc"`: `toUTCString`
+- `"iso"`: `Date.toISOString()`
+- `"string"`: `Date.toString()`
+- `"time"`: `Date.getTime()` - the default
+- `"utc"`: `Date.toUTCString()`
 
 ### replacer
 
@@ -190,3 +203,16 @@ Do not hesitate to report any bug or inconsistency [@github](https://github.com/
 
 If you find useful this package, please consider the opportunity to donate some satoshis to this bitcoin address:
 **1Md9WFAHrXTb3yPBwQWmUfv2RmzrtbHioB**
+
+# See also
+
+Other projects which aim to solve similar problems:
+
+- [arson](https://github.com/benjamn/arson) by Ben Newman
+- [devalue](https://github.com/Rich-Harris/devalue) by Rich Harris
+- [jsesc](https://github.com/mathiasbynens/jsesc) by Mathias Bynens
+- [lave](https://github.com/jed/lave) by Jed Schmidt
+- [oson](https://github.com/KnorpelSenf/oson) by Steffen Trog
+- [serialize-javascript](https://github.com/yahoo/serialize-javascript) by Eric Ferraiuolo
+- [superjson](https://github.com/blitz-js/superjson) by Blitz
+- [tosource](https://github.com/marcello3d/node-tosource) by Marcello Bast&eacute;a-Forte

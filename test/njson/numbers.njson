@@ -1,1 +1,1 @@
-{"bigNegative":-1e+50,"smallNegative":-1e-50,"integerNegative":-1,"zero":0,"integerPositive":1,"smallPositive":1e-50,"bitPositive":1e+50}
+{"bigNegative":-1e+50,"smallNegative":-1e-50,"integerNegative":-1,"zero":0,"integerPositive":1,"smallPositive":1e-50,"bitPositive":1e+50,"negativeZero":-0,"NaN":NaN,"Infinity":Infinity,"negativeInfinity":-Infinity}

@@ -23,6 +23,9 @@ describe("NJSON", () => {
     const input = readFileSync(`./test/njson/${_}.njson`).toString();
     const output = (outputs.includes(_) ? readFileSync(`./test/njson/${_}.out.njson`).toString() : input).replace(/\n$/, "");
 
-    it(_, () => expect(NJSON.stringify(NJSON.parse(input))).toStrictEqual(output));
+    it(_, () => {
+      expect(NJSON.stringify(eval(`(${input})`))).toStrictEqual(output);
+      expect(NJSON.stringify(NJSON.parse(input))).toStrictEqual(output);
+    });
   });
 });

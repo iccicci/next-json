@@ -1,4 +1,4 @@
-import { parse as parser, SyntaxError as SynError } from "./parser";
+import { NJSONError, parse as parser } from "./parser";
 
 export type NjsonFunction = (key: string, value: unknown) => unknown;
 export type NjsonReplacer = NjsonFunction | (number | string)[];
@@ -29,7 +29,7 @@ function parse<T = unknown>(text: string, options?: NjsonParseOptions | NjsonFun
 
     return options.reviver.call({ "": result }, "", result) as T;
   } catch(e) {
-    if(e instanceof SynError) {
+    if(e instanceof NJSONError) {
       const err = new SyntaxError(e.format([]).substring(7).replace(".\n at :", " at "));
       const [first, , ...rest] = err.stack!.split("\n");
 
@@ -125,9 +125,17 @@ function recursiveStringify(value: unknown, options: NjsonStringifyInternalOptio
   const type = typeof value;
 
   if(["function", "symbol"].includes(type)) return undefined;
-  if(["boolean", "number"].includes(type)) return (value as number).toString();
+  if(["boolean", "number"].includes(type)) return Object.is(value, -0) ? "-0" : (value as number).toString();
   if(type === "bigint") return (value as bigint).toString() + "n";
   if(type === "string") return JSON.stringify(value);
+
+  if(value instanceof Date) return isNaN(value.getTime()) ? "new Date(NaN)" : `new Date(${options.date(value)})`;
+
+  if(value instanceof RegExp) {
+    const [, exp, flags] = value.toString().match("/(.*)/(.*)")!;
+
+    return `new RegExp(${JSON.stringify(exp)}${flags ? `,"${flags}"` : ""})`;
+  }
 
   const nextSpace = space + options.space;
   const { newLine, replacer, valueSeparator } = options;
@@ -137,8 +145,6 @@ function recursiveStringify(value: unknown, options: NjsonStringifyInternalOptio
 
     return value.length ? `[${newLine}${elements.map(_ => nextSpace + _).join("," + newLine)}${newLine}${space}]` : "[]";
   }
-
-  if(value instanceof Date) return `Date(${options.date(value)})`;
 
   const entries = Object.entries(value)
     .map(([key, val]) => [key, recursiveStringify(replacer.call(value, key, val), options, nextSpace)])

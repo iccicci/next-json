@@ -18,22 +18,18 @@
 // [4] http://json.org/
 // [5] https://www.tbray.org/ongoing/When/201x/2014/03/05/RFC7159-JSON
 
-// ----- 2. JSON Grammar -----
+// ----- 2. NJSON Grammar -----
 
-NJSON_text = ws @value ws
+NJSON_text = wss @value wss
 
-begin_array     = ws "[" ws
-begin_object    = ws "{" ws
-end_array       = ws "]" ws
-end_object      = ws "}" ws
-name_separator  = ws ":" ws
-value_separator = ws "," ws
+comma = wss "," wss
 
-ws "whitespace" = ([ \t\n\r] / "//" (![\n] .)* / "/*" (!"*/" .)* "*/")*
+ws  "white space"  = [ \t\n\r] / "//" (![\n] .)* / "/*" (!"*/" .)* "*/"
+wss "white spaces" = ws*
 
 // ----- 3. Values -----
 
-value = false / null / true / object / array / bigint / number / string / undefined / date
+value = array / constructor / false / null / number / object / string / true / undefined
 
 false     = "false"     { return false;     }
 null      = "null"      { return null;      }
@@ -42,70 +38,82 @@ undefined = "undefined" { return undefined; }
 
 // ----- 4. Objects -----
 
-object
-  = begin_object entries:( head:entry tail:(value_separator @entry)* { return Object.fromEntries([head, ...tail]); } )? end_object
-    { return entries !== null ? entries: {}; }
-
-entry = name:string name_separator value:value { return [name, value]; }
+object = "{" wss entries:(head:entry tail:(comma @entry)* { return Object.fromEntries([head, ...tail]); })? wss "}" { return entries !== null ? entries : {}; }
+entry  = name:string wss ":" wss value:value { return [name, value]; }
 
 // ----- 5. Arrays -----
 
-array
-  = begin_array values:( head:value tail:(value_separator @value)* { return [head, ...tail]; } )? end_array
-    { return values !== null ? values : []; }
+array = "[" wss values:(head:value tail:(comma @value)* { return [head, ...tail]; })? wss "]" { return values !== null ? values : []; }
 
 // ----- 6. Numbers -----
+// See RFC 4234, Appendix B (http://tools.ietf.org/html/rfc4234).
 
-bigint "bigint" = minus? int "n" { return BigInt(text().slice(0, -1)); }
-number "number" = minus? int frac? exp? { return parseFloat(text()); }
-decimal_point   = "."
-digit1_9        = [1-9]
-e               = [eE]
-exp             = e (minus / plus)? DIGIT+
-frac            = decimal_point DIGIT+
-int             = zero / (digit1_9 DIGIT*)
-minus           = "-"
-plus            = "+"
-zero            = "0"
+number "number" = "NaN" { return NaN; } / "-"? ("Infinity" / integer ("n" / frac? exp?)) {
+  const txt = text();
+
+  if(txt === "-Infinity") return -Infinity;
+  if(txt === "-0") return -0;
+  if(txt === "Infinity") return Infinity;
+  
+  return txt.slice(-1) === "n" ? BigInt(txt.slice(0, -1)) : parseFloat(txt);
+}
+
+exp     = [eE] ("-" / "+")? decimal+
+frac    = "." decimal+
+integer = "0" / ([1-9] decimal*)
+decimal = [0-9]
 
 // ----- 7. Strings -----
 
-string "string" = quotation_mark chars:char* quotation_mark { return chars.join(""); }
+string "string" = '"' chars:char* '"' { return chars.join(""); }
 
-char
-  = unescaped
-  / escape
-    sequence:(
-        '"'
-      / "\\"
-      / "/"
-      / "b" { return "\b"; }
-      / "f" { return "\f"; }
-      / "n" { return "\n"; }
-      / "r" { return "\r"; }
-      / "t" { return "\t"; }
-      / "u" digits:$(HEXDIG HEXDIG HEXDIG HEXDIG) { return String.fromCharCode(parseInt(digits, 16)); }
-    )
-    { return sequence; }
+char = [^\0-\x1F"\\] / "\\" @(
+  "b" { return "\b"; } /
+  "f" { return "\f"; } /
+  "n" { return "\n"; } /
+  "r" { return "\r"; } /
+  "t" { return "\t"; } /
+  "u" digits:$(hexadecimal hexadecimal hexadecimal hexadecimal) { return String.fromCharCode(parseInt(digits, 16)); } /
+  [^\0-\x1F]
+)
 
-escape = "\\"
+hexadecimal = digit:. {
+  if(digit.match(/[0-9a-f]/i)) return digit;
 
-quotation_mark = '"'
+  throw peg$buildSimpleError("Invalid Unicode escape sequence.", location());
+}
 
-unescaped = [^\0-\x1F\x22\x5C]
+// ----- 8. Natives -----
 
-// ----- Core ABNF Rules -----
+constructor = "new" ws wss @(date / regexp)
 
-// See RFC 4234, Appendix B (http://tools.ietf.org/html/rfc4234).
-DIGIT  = [0-9]
-HEXDIG = [0-9a-f]i
+// ----- 9. Dates -----
 
-// ----- 8. Dates -----
+date = "Date" wss "(" wss time:(value:(number / string) { return { location: location(), value }; }) wss ")" {
+  const { value } = time as { value: number | string };
 
-date = "Date" ws "(" ws time:(number / string) ws ")" {
-    const date = new Date(time as string);
+  if(typeof value === "number" && isNaN(value)) return new Date(NaN);
 
-    if(isNaN(date.getTime())) throw peg$buildSimpleError("Invalid date.", location());
+  const date = new Date(value);
 
-    return date;
+  if(isNaN(date.getTime())) throw peg$buildSimpleError("Invalid date.", time.location);
+
+  return date;
+}
+
+// ----- 10. RegExps -----
+
+regexp =
+  "RegExp" wss "(" wss
+  exp:(value:string { return { location: location(), value }; })
+  flags:(comma @(value:string { return { location: location(), value }; }))?
+  wss ")" {
+    try {
+      return flags ? new RegExp(exp.value, flags.value) : new RegExp(exp.value);
+    }
+    catch(e: any) {
+      const { message } = e;
+
+      throw peg$buildSimpleError(message + ".", message.match("Invalid flags") ? flags.location : exp.location);
+    }
   }

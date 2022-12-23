@@ -21,7 +21,8 @@ const parser = peggy.generate(readFileSync("./next-json.pegjs").toString(), {
       "/* eslint-disable prefer-const */",
       "/* eslint-disable sort-keys-fix/sort-keys-fix */",
       "/* eslint-disable space-unary-ops */"
-    ].join("\n")
+    ].join("\n"),
+    errorName: "NJSONError"
   }
 } as unknown as ParserBuildOptions);
 
