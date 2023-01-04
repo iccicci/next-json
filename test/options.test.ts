@@ -6,11 +6,32 @@ const v18it = version >= 18 ? it : it.skip;
 
 describe("options", () => {
   describe("NJSON.parse", () => {
+    it("numberKey", () => {
+      NJSON.parse("[null]", {
+        numberKey: true,
+        reviver:   (key, value) => {
+          if(! value) expect(typeof key).toBe("number");
+
+          return value;
+        }
+      });
+
+      NJSON.parse("[null]", {
+        reviver: (key, value) => {
+          if(! value) expect(typeof key).toBe("string");
+
+          return value;
+        }
+      });
+
+      expect.assertions(2);
+    });
+
     it("reviver", () => {
       const value = '["null",{"false":true,"string":"njson"},{"subArray":[false,null,true,[],{}]}]';
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const reviver = function(this: any, key: string, value: unknown) {
+      const reviver = function(this: any, key: number | string, value: unknown) {
         return key === "0" && this.length === 3 ? null : key === "false" ? false : value;
       };
       const jsonReviver = jest.fn(reviver);
@@ -32,21 +53,58 @@ describe("options", () => {
       expect(njsonResult2).toStrictEqual(jsonResult);
     });
 
-    it("throwing reviver", () => {
-      expect(() =>
-        NJSON.parse('{"a":[1]}', key => {
-          if(key === "0") throw new Error("test");
-        })
-      ).toThrow(Error);
+    it("bad reviver for Map", () => {
+      expect(() => NJSON.parse("new Map([[1,2]])", { reviver: (key, value) => (key === 0 ? 23 : value) })).toThrow(Error);
+    });
+
+    it("reviver for Map", () => {
+      expect(NJSON.parse("new Map([[1,2]])", { reviver: (key, value) => (key === 0 ? [3, 4] : value) })).toStrictEqual(new Map([[3, 4]]));
+    });
+
+    it("reviver for Set", () => {
+      expect(NJSON.parse("new Set([1,2,3])", { reviver: (key, value) => (key === 1 ? 4 : value) })).toStrictEqual(new Set([1, 4, 3]));
     });
   });
 
   describe("NJSON.stringify", () => {
     const spaceValue = [null, { false: false, string: "njson" }, { subArray: [false, null, true, [], {}] }];
 
+    describe("date", () => {
+      const date = new Date("1976-01-23T14:00:00.000Z");
+
+      it("default", () => expect(NJSON.stringify(date)).toBe("new Date(191253600000)"));
+      it("iso", () => expect(NJSON.stringify(date, { date: "iso" })).toBe('new Date("1976-01-23T14:00:00.000Z")'));
+      it("string", () => expect(NJSON.stringify(date, { date: "string" })).toBe('new Date("Fri Jan 23 1976 15:00:00 GMT+0100 (Central European Standard Time)")'));
+      it("time", () => expect(NJSON.stringify(date, { date: "time" })).toBe("new Date(191253600000)"));
+      it("utc", () => expect(NJSON.stringify(date, { date: "utc" })).toBe('new Date("Fri, 23 Jan 1976 14:00:00 GMT")'));
+    });
+
+    it("numberKey", () => {
+      expect(NJSON.stringify([null], { numberKey: true, replacer: [0] })).toBe("[null]");
+
+      NJSON.stringify([null], {
+        numberKey: true,
+        replacer:  (key, value) => {
+          if(! value) expect(typeof key).toBe("number");
+
+          return value;
+        }
+      });
+
+      NJSON.stringify([null], {
+        replacer: (key, value) => {
+          if(! value) expect(typeof key).toBe("string");
+
+          return value;
+        }
+      });
+
+      expect.assertions(3);
+    });
+
     it("function replacer", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const replacer = function(this: any, key: string, value: unknown) {
+      const replacer = function(this: any, key: number | string, value: unknown) {
         return key === "0" && this.length === 3 ? "null" : key === "false" ? true : value;
       };
       const jsonReplacer = jest.fn(replacer);
@@ -75,6 +133,10 @@ describe("options", () => {
       expect(NJSON.stringify(replaceValue, { replacer: [0, "subObject"] })).toBe(JSON.stringify(replaceValue, [0, "subObject"]));
     });
 
+    it("bad replacer for Map", () => {
+      expect(() => NJSON.stringify(new Map([[1, 2]]), { replacer: (key, value) => (key === 0 ? 23 : value) })).toThrow(Error);
+    });
+
     it("number space", () => {
       expect(NJSON.stringify(spaceValue, null, 2)).toBe(JSON.stringify(spaceValue, null, 2));
       expect(NJSON.stringify(spaceValue, { space: 2 })).toBe(JSON.stringify(spaceValue, null, 2));
@@ -94,16 +156,6 @@ describe("options", () => {
       const undefinedValue = { array: [undefined, "njson", undefined], object: { njson: undefined, ok: "njson" }, undef: undefined };
 
       expect(NJSON.stringify(undefinedValue, { undef: false })).toBe(JSON.stringify(undefinedValue));
-    });
-
-    describe("date", () => {
-      const date = new Date("1976-01-23T14:00:00.000Z");
-
-      it("default", () => expect(NJSON.stringify(date)).toBe("new Date(191253600000)"));
-      it("iso", () => expect(NJSON.stringify(date, { date: "iso" })).toBe('new Date("1976-01-23T14:00:00.000Z")'));
-      it("string", () => expect(NJSON.stringify(date, { date: "string" })).toBe('new Date("Fri Jan 23 1976 15:00:00 GMT+0100 (Central European Standard Time)")'));
-      it("time", () => expect(NJSON.stringify(date, { date: "time" })).toBe("new Date(191253600000)"));
-      it("utc", () => expect(NJSON.stringify(date, { date: "utc" })).toBe('new Date("Fri, 23 Jan 1976 14:00:00 GMT")'));
     });
   });
 });

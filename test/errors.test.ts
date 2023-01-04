@@ -1,10 +1,15 @@
 import { NJSON } from "../index";
 
+const match = process.version.match(/^v([0-9]+)\./);
+const version = match ? match[1] : 0;
+
 const expectedValue = 'Expected "[", "false", "new", "null", "true", "undefined", "{", number, or string but ';
 
 const tests: Record<string, [string, string]> = {
   "bad date":                     ["new Date(njson)", 'Expected number or string but "n" found at 1:10'],
   "bad date format":              ['new\nDate("njson")', "Invalid date at 2:6"],
+  "bad map 1":                    ['new Map("njson")', 'Expected ")" or "[" but "\\"" found at 1:9'],
+  "bad map 2":                    ["new Map([[1,2,3]])", 'Expected "]" but "," found at 1:14'],
   "bad number":                   ["1w1", 'Expected end of input but "w" found at 1:2'],
   "bad regexp 1":                 ["new RegExp(", "Expected string but end of input found at 1:12"],
   "bad regexp 2":                 ["new RegExp(0", 'Expected string but "0" found at 1:12'],
@@ -12,7 +17,9 @@ const tests: Record<string, [string, string]> = {
   "bad regexp 4":                 ['new RegExp("a",)', 'Expected string but ")" found at 1:16'],
   "bad regexp 5":                 ['new RegExp("a","a")', "Invalid flags supplied to RegExp constructor 'a' at 1:16"],
   "bad regexp 6":                 ['new RegExp("[a")', "Invalid regular expression: /[a/: Unterminated character class at 1:12"],
+  "bad set":                      ["new Set(23)", 'Expected ")" or "[" but "2" found at 1:9'],
   "bad unicode":                  ['"\\u12"', "Invalid Unicode escape sequence at 1:6"],
+  "bad url":                      ['\nnew\nURL(\n   "njson")', version === "14" ? "Invalid URL: njson at 4:4" : "Invalid URL at 4:4"],
   "missing colon in object":      ['{"a" "b"}', 'Expected ":" but "\\"" found at 1:6'],
   "missing comma in array":       ["[1 2]", 'Expected "," or "]" but "2" found at 1:4'],
   "missing comma in object":      ['{"a":"b" "c"}', 'Expected "," or "}" but "\\"" found at 1:10'],

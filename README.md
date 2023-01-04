@@ -54,7 +54,10 @@ This package is intended to offer something as great as JSON... trying to add so
 - &#9745; supports `-0`, `NaN` and `Infinity`
 - &#9745; supports `BigInt`
 - &#9745; supports `Date`
+- &#9745; supports `Map`
 - &#9745; supports `RegExp`
+- &#9745; supports `Set`
+- &#9745; supports `URL`
 - &#9744; supports `Error`
 - &#9744; supports circular references
 
@@ -64,7 +67,12 @@ This doesn't mean it's 100% compliant: due its higher number of supported featur
 serialization through `NJSON.stringify` may differs from the result of the serialization through `JSON.stringify`.
 
 On the other hand, the result of the deserialization of a _valid JSON encoded string_ through `NJSON.parse` will
-produce a value _deep equal_ to the value produced by `JSON.parse`.
+produce a value _deep equal_ to the value produced by `JSON.parse` and the `reviver` function will be called the same
+amount of times, with the same parameters and in the same order.
+
+Taken the result of a `JSON.parse` call (i.e. a value which contains only _valid JSON values_), if serialized through
+`JSON.stringify` or `NJSON.stringify` produces two equal strings and the `replacer` function will be called the same
+amount of times, with the same parameters and in the same order.
 
 # Installation
 
@@ -94,12 +102,14 @@ const serialized: string = NJSON.stringify({ some: "value" });
 const deserialized: { some: string } = NJSON.parse<{ some: string }>(serialized);
 ```
 
+# API
+
 ## NJSON.parse(text[, reviver])
 
 Just for compatibility with `JSON.parse`. Alias for:
 
 ```typescript
-NJSON.parse(value, { reviver });
+NJSON.parse(text, { reviver });
 ```
 
 ## NJSON.parse(text[, options])
@@ -127,34 +137,44 @@ NJSON.stringify(value, { replacer, space });
 
 ## interface NjsonParseOptions
 
-- [`reviver`](#reviver):
+- [`numberKey`](#njsonparseoptionsnumberkey):
+  [&lt;boolean>](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#Boolean_type)
+  Alters the type of the `key` argument for `reviver`. **Default:** `false`.
+- [`reviver`](#njsonparseoptionsreviver):
   [&lt;Function>](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function) Alters the
   behavior of the deserialization process. **Default:** `null`.
 
-### reviver
+### NjsonParseOptions.numberKey
+
+If `true`, the `reviver` function, for `Array` elements, will be called with the `key` argument in a `Number` form.
+
+### NjsonParseOptions.reviver
 
 As the
 [`reviver`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse#parameters)
-parameter of `JSON.parse`.
+parameter of `JSON.parse`. See also [replacer / reviver](#replacer--reviver) for NJSON specific details.
 
 ## interface NjsonStringifyOptions
 
-- [`date`](#date):
+- [`date`](#njsonstringifyoptionsdate):
   [&lt;string>](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#String_type)
   Specifies `Date`s conversion method. **Default:** `"time"`.
-- [`replacer`](#replacer):
+- [`numberKey`](#njsonstringifyoptionsnumberkey):
+  [&lt;boolean>](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#Boolean_type)
+  Alters the type of the `key` argument for `replacer`. **Default:** `false`.
+- [`replacer`](#njsonstringifyoptionsreplacer):
   [&lt;Function>](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function) |
   [&lt;Array>](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array) Alters the
   behavior of the serialization process. **Default:** `null`.
-- [`space`](#space):
+- [`space`](#njsonstringifyoptionsspace):
   [&lt;number>](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#Number_type) |
   [&lt;string>](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#String_type)
   Specifies the indentation. **Default:** `null`.
-- [`undef`](#undef):
+- [`undef`](#njsonstringifyoptionsundef):
   [&lt;boolean>](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#Boolean_type)
   Specifies the `undefined` behavior. **Default:** `true`.
 
-### date
+### NjsonStringifyOptions.date
 
 Specifies the method of `Date` objects used to serialize them. Follows the list of the allowed values and the relative
 method used.
@@ -164,21 +184,36 @@ method used.
 - `"time"`: `Date.getTime()` - the default
 - `"utc"`: `Date.toUTCString()`
 
-### replacer
+### NjsonStringifyOptions.numberKey
+
+If `true`, the `replacer` function, for `Array` elements, will be called with the `key` argument in a `Number` form.
+
+### NjsonStringifyOptions.replacer
 
 As the
 [`replacer`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify#parameters)
-parameter of `JSON.serialize`.
+parameter of `JSON.serialize`. See also [replacer / reviver](#replacer--reviver) for NJSON specific details.
 
-### space
+### NjsonStringifyOptions.space
 
 As the
 [`space`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify#parameters)
 parameter of `JSON.serialize`.
 
-### undef
+### NjsonStringifyOptions.undef
 
-For default `NJSON.stringify` serializes `undefined` values as well. If set to `false`, `undefined` values are treated as `JSON.stringify` does.
+For default `NJSON.stringify` serializes `undefined` values as well. If set to `false`, `undefined` values are
+treated as `JSON.stringify` does.
+
+# replacer / reviver
+
+Even if `Date`, `Error`, `RegExp` and `URL` are `Object`s, they are treated as native values i.e. `replacer` and
+`reviver` will be never called with one of them as `this` context.<br />
+For `Array`s the `key` argument is obviously a positive integer, but in a `String` form for `JSON` compatibility. This
+can be altered (i.e. in a `Number`) form the `numberKey` option can be used.<br />
+For `Set`s the `key` argument is obviously a positive integer as well, but it is only passed in a `Number` form.<br />
+For `Map`s the `key` argument is once again a positive integer in a `Number` form and the `value` argument is the entry
+in the form `[mapKey, mapValue]`.
 
 # Compatibility
 

@@ -26,6 +26,10 @@ comma = wss "," wss
 
 ws  "white space"  = [ \t\n\r] / "//" (![\n] .)* / "/*" (!"*/" .)* "*/"
 wss "white spaces" = ws*
+open_round         = "("
+closed_round       = ")"
+open_square        = "["
+closed_square      = "]"
 
 // ----- 3. Values -----
 
@@ -43,7 +47,7 @@ entry  = name:string wss ":" wss value:value { return [name, value]; }
 
 // ----- 5. Arrays -----
 
-array = "[" wss values:(head:value tail:(comma @value)* { return [head, ...tail]; })? wss "]" { return values !== null ? values : []; }
+array = open_square wss values:(head:value tail:(comma @value)* { return [head, ...tail]; })? wss closed_square { return values !== null ? values : []; }
 
 // ----- 6. Numbers -----
 // See RFC 4234, Appendix B (http://tools.ietf.org/html/rfc4234).
@@ -85,11 +89,11 @@ hexadecimal = digit:. {
 
 // ----- 8. Natives -----
 
-constructor = "new" ws wss @(date / regexp)
+constructor = "new" ws wss @(date / map / regexp / set / url)
 
 // ----- 9. Dates -----
 
-date = "Date" wss "(" wss time:(value:(number / string) { return { location: location(), value }; }) wss ")" {
+date = "Date" wss open_round wss time:(value:(number / string) { return { location: location(), value }; }) wss closed_round {
   const { value } = time as { value: number | string };
 
   if(typeof value === "number" && isNaN(value)) return new Date(NaN);
@@ -104,10 +108,10 @@ date = "Date" wss "(" wss time:(value:(number / string) { return { location: loc
 // ----- 10. RegExps -----
 
 regexp =
-  "RegExp" wss "(" wss
+  "RegExp" wss open_round wss
   exp:(value:string { return { location: location(), value }; })
   flags:(comma @(value:string { return { location: location(), value }; }))?
-  wss ")" {
+  wss closed_round {
     try {
       return flags ? new RegExp(exp.value, flags.value) : new RegExp(exp.value);
     }
@@ -117,3 +121,27 @@ regexp =
       throw peg$buildSimpleError(message + ".", message.match("Invalid flags") ? flags.location : exp.location);
     }
   }
+
+// ----- 10. URLs -----
+
+url = "URL" wss open_round wss url:(value:string { return { location: location(), value }; }) wss closed_round {
+    try {
+      return new URL(url.value);
+    }
+    catch(e: any) {
+      const { message } = e;
+
+      throw peg$buildSimpleError(message + ".", url.location);
+    }
+  }
+
+// ----- 11. Sets -----
+
+set = "Set" wss open_round wss elements:array? wss closed_round { return elements ? new Set(elements) : new Set(); }
+
+// ----- 12. Maps -----
+
+map = "Map" wss open_round wss elements:array_map_entry? wss closed_round { return elements ? new Map(elements) : new Map(); }
+
+map_entry       = open_square wss key:value comma value:value wss closed_square { return [key, value]; }
+array_map_entry = open_square wss values:(head:map_entry tail:(comma @map_entry)* { return [head, ...tail]; })? wss closed_square { return values !== null ? values : []; }
