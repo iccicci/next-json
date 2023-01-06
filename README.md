@@ -50,10 +50,12 @@ This package is intended to offer something as great as JSON... trying to add so
 
 - &#9745; extends JSON
 - &#9745; supports C style comments
+- &#9745; supports escaped new line in strings
 - &#9745; supports `undefined`
 - &#9745; supports `-0`, `NaN` and `Infinity`
 - &#9745; supports `BigInt`
 - &#9745; supports `Date`
+- &#9745; supports `Int8Array`, `Uint8Array` and `Uint8ClampedArray`
 - &#9745; supports `Map`
 - &#9745; supports `RegExp`
 - &#9745; supports `Set`
@@ -73,6 +75,42 @@ amount of times, with the same parameters and in the same order.
 Taken the result of a `JSON.parse` call (i.e. a value which contains only _valid JSON values_), if serialized through
 `JSON.stringify` or `NJSON.stringify` produces two equal strings and the `replacer` function will be called the same
 amount of times, with the same parameters and in the same order.
+
+## NJSON parser
+
+**NJSON** offers its own parser which means it **doesn't use** `eval` with its related security hole.
+
+Even if the **NJSON** serialized string is _JavaScript compliant_, `NJSON.parse` is not able to parse any JavaScript
+code, but only the subset produced by `NJSON.stringify` (otherwise it would have been another `eval` implementation).
+
+## Not supported by design
+
+**NJSON** do not supports some `Object`s by design; when one of them is encountered during the serialization process
+they will be simply omitted (as `JSON` does). Follow the reasons.
+
+### ArrayBuffer
+
+`ArrayBuffer`s can't be manipulated by JavaScript design: `Int8Array`, `Uint8Array` or `Uint8ClampedArray` can be used.
+
+### Function
+
+**NJSON** is designed to _serialize_ / _deserialize_ complex data to be shared between different systems, possibly
+written with other languages than JavaScript (once implementations in other languages will be written). Even if
+JavaScript can see a function as a piece of data, it is actually code, not data. More than this, for other languages,
+may be a complex problem execute JavaScript functions.
+
+Last but not least, allowing the deserialization of a function would open once again the security hole implied by the
+use of `eval`, and one of the reasons why **NJSON** was born, is exactly to avoid that security hole.
+
+### Symbol
+
+A `Symbol` is something strictly bound to the JavaScript execution environment which instantiate it: sharing it between
+distinct systems is something almost meaningless.
+
+### TypedArray
+
+Except for `Int8Array`, `Uint8Array` and `Uint8ClampedArray`, `TypedArray`s are platform dependant: trying to transfer
+one of them between different architectures could result in unexpected problems.
 
 # Installation
 
@@ -207,8 +245,8 @@ treated as `JSON.stringify` does.
 
 # replacer / reviver
 
-Even if `Date`, `Error`, `RegExp` and `URL` are `Object`s, they are treated as native values i.e. `replacer` and
-`reviver` will be never called with one of them as `this` context.<br />
+Even if `Date`, `Error`, `Int8Array`, `RegExp`, `URL`, `Uint8Array` and `Uint8ClampedArray` are `Object`s, they are
+treated as native values i.e. `replacer` and `reviver` will be never called with one of them as `this` context.<br />
 For `Array`s the `key` argument is obviously a positive integer, but in a `String` form for `JSON` compatibility. This
 can be altered (i.e. in a `Number`) form the `numberKey` option can be used.<br />
 For `Set`s the `key` argument is obviously a positive integer as well, but it is only passed in a `Number` form.<br />

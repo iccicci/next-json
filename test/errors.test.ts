@@ -20,6 +20,7 @@ const tests: Record<string, [string, string]> = {
   "bad set":                      ["new Set(23)", 'Expected ")" or "[" but "2" found at 1:9'],
   "bad unicode":                  ['"\\u12"', "Invalid Unicode escape sequence at 1:6"],
   "bad url":                      ['\nnew\nURL(\n   "njson")', version === "14" ? "Invalid URL: njson at 4:4" : "Invalid URL at 4:4"],
+  "bigint in TypedArray":         ["new Int8Array([10n])", "BigInt is not allowed for TypedArray at 1:16"],
   "missing colon in object":      ['{"a" "b"}', 'Expected ":" but "\\"" found at 1:6'],
   "missing comma in array":       ["[1 2]", 'Expected "," or "]" but "2" found at 1:4'],
   "missing comma in object":      ['{"a":"b" "c"}', 'Expected "," or "}" but "\\"" found at 1:10'],

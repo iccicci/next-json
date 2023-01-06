@@ -32,9 +32,17 @@
   "homepage": "https://github.com/iccicci/next-json#readme",
   "keywords": [
     "bigint",
+    "buffer",
     "date",
+    "eval",
+    "infinity",
+    "javascript",
     "json",
+    "map",
+    "nan",
     "parse",
+    "regexp",
+    "set",
     "stringify",
     "undefined"
   ],
@@ -62,5 +70,5 @@
   },
   "sideEffects": false,
   "types": "./dist/types/index.d.ts",
-  "version": "0.1.2"
+  "version": "0.1.3"
 }

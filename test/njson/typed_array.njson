@@ -1,0 +1,1 @@
+[new Int8Array([-1,0,1]),new Uint8Array([0,1,2]),new Uint8ClampedArray([3,4,5]),new Int8Array(),new Uint8Array(),new Uint8ClampedArray()]

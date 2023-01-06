@@ -13,5 +13,6 @@
         "njson": "njson"
       }
     ])
-  }
+  },
+  new Uint8Array([23,42])
 ]

@@ -77,7 +77,7 @@ function recursiveParse(value: unknown, reviver: NjsonFunction, numberKey: boole
           for(let l = i + i; l < length; ++l) value.add(elements[l]);
         }
       });
-    } else Object.entries(value).forEach(([key, val]) => ((value as Record<string, unknown>)[key] = reviver.call(value, key, recursiveParse(val, reviver, numberKey))));
+    } else if(! ArrayBuffer.isView(value)) Object.entries(value).forEach(([key, val]) => ((value as Record<string, unknown>)[key] = reviver.call(value, key, recursiveParse(val, reviver, numberKey))));
   }
 
   return value;
@@ -165,7 +165,11 @@ function recursiveStringify(value: unknown, options: NjsonStringifyInternalOptio
   if(type === "bigint") return (value as bigint).toString() + "n";
   if(type === "string") return JSON.stringify(value);
 
+  if(value instanceof ArrayBuffer) return undefined;
+
   if(value instanceof Date) return isNaN(value.getTime()) ? "new Date(NaN)" : `new Date(${options.date(value)})`;
+
+  if(value instanceof Int8Array) return value.length ? `new Int8Array([${value.toString()}])` : "new Int8Array()";
 
   if(value instanceof RegExp) {
     const [, exp, flags] = value.toString().match("/(.*)/(.*)")!;
@@ -174,6 +178,11 @@ function recursiveStringify(value: unknown, options: NjsonStringifyInternalOptio
   }
 
   if(value instanceof URL) return `new URL(${JSON.stringify(value.toString())})`;
+
+  if(value instanceof Uint8Array) return value.length ? `new Uint8Array([${value.toString()}])` : "new Uint8Array()";
+  if(value instanceof Uint8ClampedArray) return value.length ? `new Uint8ClampedArray([${value.toString()}])` : "new Uint8ClampedArray()";
+
+  if(ArrayBuffer.isView(value)) return undefined;
 
   const nextSpace = space + options.space;
   const { newLine, numberKey, replacer, valueSeparator } = options;

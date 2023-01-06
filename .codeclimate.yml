@@ -5,16 +5,19 @@ checks:
       threshold: 500
   method-complexity:
     config:
-      threshold: 60
+      threshold: 100
   method-count:
     config:
       threshold: 35
   method-lines:
     config:
       threshold: 100
+  nested-control-flow:
+    config:
+      threshold: 10
   return-statements:
     config:
-      threshold: 20
+      threshold: 30
   similar-code:
     config:
       threshold: 60
