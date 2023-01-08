@@ -154,6 +154,8 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
   return recursiveStringify(internalOptions.replacer.call({ "": value }, "", value), internalOptions, "");
 }
 
+const nativeErrors = [EvalError, RangeError, ReferenceError, SyntaxError, TypeError, URIError];
+
 function recursiveStringify(value: unknown, options: NjsonStringifyInternalOptions, space: string, skip = 0): unknown {
   if(value === null) return "null";
   if(value === undefined) return options.undef ? "undefined" : undefined;
@@ -186,6 +188,16 @@ function recursiveStringify(value: unknown, options: NjsonStringifyInternalOptio
 
   const nextSpace = space + options.space;
   const { newLine, numberKey, replacer, valueSeparator } = options;
+
+  if(value instanceof Error) {
+    const id = (nativeErrors as unknown[]).indexOf(value.constructor);
+    const constructor = id === -1 ? Error : nativeErrors[id];
+    const { cause } = value;
+
+    return `new ${constructor.name}(${cause ? newLine + nextSpace : ""}${JSON.stringify(replacer.call(value, "message", value.message))}${
+      cause ? `,${newLine}${nextSpace}${recursiveStringify({ cause }, options, nextSpace)}${newLine}${space}` : ""
+    })`;
+  }
 
   const elements = (array: unknown[], stringKey: boolean, skip = 0) =>
     `[${newLine}${array

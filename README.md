@@ -60,7 +60,7 @@ This package is intended to offer something as great as JSON... trying to add so
 - &#9745; supports `RegExp`
 - &#9745; supports `Set`
 - &#9745; supports `URL`
-- &#9744; supports `Error`
+- &#9745; supports `Error`
 - &#9744; supports circular references
 
 ## NJSON extends JSON
@@ -245,8 +245,8 @@ treated as `JSON.stringify` does.
 
 # replacer / reviver
 
-Even if `Date`, `Error`, `Int8Array`, `RegExp`, `URL`, `Uint8Array` and `Uint8ClampedArray` are `Object`s, they are
-treated as native values i.e. `replacer` and `reviver` will be never called with one of them as `this` context.<br />
+Even if `Date`, `Int8Array`, `RegExp`, `URL`, `Uint8Array` and `Uint8ClampedArray` are `Object`s, they are treated as
+native values i.e. `replacer` and `reviver` will be never called with one of them as `this` context.<br />
 For `Array`s the `key` argument is obviously a positive integer, but in a `String` form for `JSON` compatibility. This
 can be altered (i.e. in a `Number`) form the `numberKey` option can be used.<br />
 For `Set`s the `key` argument is obviously a positive integer as well, but it is only passed in a `Number` form.<br />

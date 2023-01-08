@@ -14,5 +14,11 @@
       }
     ])
   },
-  new Uint8Array([23,42])
+  new Uint8Array([23,42]),
+  new EvalError(
+    "thrown error",
+    {
+      "cause": new RangeError("original error")
+    }
+  )
 ]

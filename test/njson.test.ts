@@ -44,7 +44,11 @@ describe("NJSON", () => {
     const set = new Set([object1]);
     const object2 = { map, set };
     const uint8 = new Uint8Array([23, 42]);
-    const value = [object2, uint8];
+    const originalMessage = "original error";
+    const originalError = new RangeError(originalMessage);
+    const thrownMessage = "thrown error";
+    const thrownError = new EvalError(thrownMessage, { cause: originalError });
+    const value = [object2, uint8, thrownError];
 
     const replacer_reviver = function(key: number | string, value: unknown) {
       return value;
@@ -66,11 +70,15 @@ describe("NJSON", () => {
       ["set", set],
       [0, object1],
       ["njson", "njson"],
-      ["1", uint8]
+      ["1", uint8],
+      ["2", thrownError],
+      ["message", thrownMessage],
+      ["cause", originalError],
+      ["message", originalMessage]
     ]);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect((replacer1.mock as any).contexts).toStrictEqual([{ "": value }, value, object2, map, object1, object2, set, object1, value]);
+    expect((replacer1.mock as any).contexts).toStrictEqual([{ "": value }, value, object2, map, object1, object2, set, object1, value, value, thrownError, thrownError, originalError]);
 
     expect(replacer2.mock.calls).toStrictEqual([
       ["", value],

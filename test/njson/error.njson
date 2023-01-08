@@ -1,0 +1,1 @@
+new Error("njson",{"cause":new SyntaxError("njson\nnjson")})
