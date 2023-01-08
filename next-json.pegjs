@@ -174,8 +174,8 @@ error =
   err:("Error" / "EvalError" / "RangeError" / "ReferenceError" / "SyntaxError" / "TypeError" / "URIError") wss
   open_round message:string cause:(comma open_brace '"cause"' wss colon @value closed_brace)? closed_round
   {
-    const constr = errors[err as Errors];
-    const val = cause ? new constr(message, { cause }) : new constr(message);
+    const constructor = errors[err as Errors];
+    const val = cause ? new constructor(message, { cause }) : new constructor(message);
 
     return Object.defineProperty(val, "stack", { configurable: true, value: undefined, writable: true });
   }

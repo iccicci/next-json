@@ -23,8 +23,7 @@ const parser = peggy.generate(readFileSync("./next-json.pegjs").toString(), {
       "/* eslint-disable space-unary-ops */",
       "",
       "const errors = { Error, EvalError, RangeError, ReferenceError, SyntaxError, TypeError, URIError };",
-      "type Errors = keyof typeof errors;",
-      ""
+      "type Errors = keyof typeof errors;"
     ].join("\n"),
     errorName: "NJSONError"
   }

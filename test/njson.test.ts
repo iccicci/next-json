@@ -89,7 +89,11 @@ describe("NJSON", () => {
       ["set", set],
       [0, object1],
       ["njson", "njson"],
-      [1, uint8]
+      [1, uint8],
+      [2, thrownError],
+      ["message", thrownMessage],
+      ["cause", originalError],
+      ["message", originalMessage]
     ]);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -107,11 +111,15 @@ describe("NJSON", () => {
       ["set", set],
       ["0", object2],
       ["1", uint8],
+      ["message", thrownMessage],
+      ["message", originalMessage],
+      ["cause", originalError],
+      ["2", thrownError],
       ["", value]
     ]);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect((reviver1.mock as any).contexts).toStrictEqual([object1, map, object2, object1, set, object2, value, value, { "": value }]);
+    expect((reviver1.mock as any).contexts).toStrictEqual([object1, map, object2, object1, set, object2, value, value, thrownError, originalError, thrownError, value, { "": value }]);
 
     expect(reviver2.mock.calls).toStrictEqual([
       ["njson", "njson"],
@@ -122,6 +130,10 @@ describe("NJSON", () => {
       ["set", set],
       [0, object2],
       [1, uint8],
+      ["message", thrownMessage],
+      ["message", originalMessage],
+      ["cause", originalError],
+      [2, thrownError],
       ["", value]
     ]);
 
