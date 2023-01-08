@@ -20,7 +20,10 @@ const parser = peggy.generate(readFileSync("./next-json.pegjs").toString(), {
       "/* eslint-disable keyword-spacing */",
       "/* eslint-disable prefer-const */",
       "/* eslint-disable sort-keys-fix/sort-keys-fix */",
-      "/* eslint-disable space-unary-ops */"
+      "/* eslint-disable space-unary-ops */",
+      "",
+      "const errors = { Error, EvalError, RangeError, ReferenceError, SyntaxError, TypeError, URIError };",
+      "type Errors = keyof typeof errors;"
     ].join("\n"),
     errorName: "NJSONError"
   }

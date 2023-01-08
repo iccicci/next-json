@@ -54,15 +54,16 @@ array = open_square values:(head:value tail:(comma @value)* { return [head, ...t
 // ----- 6. Numbers -----
 // See RFC 4234, Appendix B (http://tools.ietf.org/html/rfc4234).
 
-number "number" = ("NaN" { return NaN; } / "-"? ("Infinity" / integer ("n" / frac? exp?))) wss {
-  const txt = text();
+number "number" = ("NaN" { return NaN; } / "-"? ("Infinity" / integer ("n" / frac? exp?))) wss
+  {
+    const txt = text();
 
-  if(txt === "-Infinity") return -Infinity;
-  if(txt === "-0") return -0;
-  if(txt === "Infinity") return Infinity;
-  
-  return txt.slice(-1) === "n" ? BigInt(txt.slice(0, -1)) : parseFloat(txt);
-}
+    if(txt === "-Infinity") return -Infinity;
+    if(txt === "-0") return -0;
+    if(txt === "Infinity") return Infinity;
+
+    return txt.slice(-1) === "n" ? BigInt(txt.slice(0, -1)) : parseFloat(txt);
+  }
 
 exp     = [eE] ("-" / "+")? decimal+
 frac    = "." decimal+
@@ -85,29 +86,31 @@ char = escaped_new_line @([^\0-\x1F"\\] / "\\" @(
 
 escaped_new_line = ("\\\r\n" / "\\\r" / "\\\n")*
 
-hexadecimal = digit:. {
-  if(digit.match(/[0-9a-f]/i)) return digit;
+hexadecimal = digit:.
+  {
+    if(digit.match(/[0-9a-f]/i)) return digit;
 
-  throw peg$buildSimpleError("Invalid Unicode escape sequence.", location());
-}
+    throw peg$buildSimpleError("Invalid Unicode escape sequence.", location());
+  }
 
 // ----- 8. Natives -----
 
-constructor = "new" ws wss @(date / int8array / map / regexp / set / uint8array / uint8clampedarray / url)
+constructor = "new" ws wss @(date / error / int8array / map / regexp / set / uint8array / uint8clampedarray / url)
 
 // ----- 9. Dates -----
 
-date = "Date" wss open_round time:(value:(number / string) { return { location: location(), value }; }) closed_round {
-  const { value } = time as { value: number | string };
+date = "Date" wss open_round time:(value:(number / string) { return { location: location(), value }; }) closed_round
+  {
+    const { value } = time as { value: number | string };
 
-  if(typeof value === "number" && isNaN(value)) return new Date(NaN);
+    if(typeof value === "number" && isNaN(value)) return new Date(NaN);
 
-  const date = new Date(value);
+    const date = new Date(value);
 
-  if(isNaN(date.getTime())) throw peg$buildSimpleError("Invalid date.", time.location);
+    if(isNaN(date.getTime())) throw peg$buildSimpleError("Invalid date.", time.location);
 
-  return date;
-}
+    return date;
+  }
 
 // ----- 10. RegExps -----
 
@@ -115,11 +118,11 @@ regexp =
   "RegExp" wss open_round
   exp:(value:string { return { location: location(), value }; })
   flags:(comma @(value:string { return { location: location(), value }; }))?
-  closed_round {
+  closed_round
+  {
     try {
       return flags ? new RegExp(exp.value, flags.value) : new RegExp(exp.value);
-    }
-    catch(e: any) {
+    } catch(e: any) {
       const { message } = e;
 
       throw peg$buildSimpleError(message + ".", message.match("Invalid flags") ? flags.location : exp.location);
@@ -128,11 +131,11 @@ regexp =
 
 // ----- 10. URLs -----
 
-url = "URL" wss open_round url:(value:string { return { location: location(), value }; }) closed_round {
+url = "URL" wss open_round url:(value:string { return { location: location(), value }; }) closed_round
+  {
     try {
       return new URL(url.value);
-    }
-    catch(e: any) {
+    } catch(e: any) {
       const { message } = e;
 
       throw peg$buildSimpleError(message + ".", url.location);
@@ -158,8 +161,30 @@ uint8clampedarray = "Uint8ClampedArray" wss open_round elements:array_small_numb
 
 array_small_number = open_square values:(head:small_number tail:(comma @small_number)* { return [head, ...tail]; })? closed_square { return values !== null ? values : []; }
 
-small_number = value:number {
-  if(typeof value === "bigint") throw peg$buildSimpleError("BigInt is not allowed for TypedArray.", location());
+small_number = value:number
+  {
+    if(typeof value === "bigint") throw peg$buildSimpleError("BigInt is not allowed for TypedArray.", location());
 
-  return value;
-}
+    return value;
+  }
+
+// ----- 14. Errors -----
+
+error =
+  err:("Error" / "EvalError" / "RangeError" / "ReferenceError" / "SyntaxError" / "TypeError" / "URIError") wss
+  open_round message:string closed_round
+  {
+    const constructor = errors[err as Errors];
+    const val = new constructor(message);
+
+    return Object.defineProperty(val, "stack", { configurable: true, value: undefined, writable: true });
+  }
+  /* Valid from Node.js v16: need to be refactored
+  open_round message:string cause:(comma open_brace '"cause"' wss colon @value closed_brace)? closed_round
+  {
+    const constructor = errors[err as Errors];
+    const val = cause ? new constructor(message, { cause }) : new constructor(message);
+
+    return Object.defineProperty(val, "stack", { configurable: true, value: undefined, writable: true });
+  }
+  */

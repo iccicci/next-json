@@ -1,1 +1,1 @@
-[{"map":new Map([["njson",{"njson":"njson"}]]),"set":new Set([{"njson":"njson"}])},new Uint8Array([23,42])]
+[{"map":new Map([["njson",{"njson":"njson"}]]),"set":new Set([{"njson":"njson"}])},new Uint8Array([23,42]),new EvalError("thrown error")]

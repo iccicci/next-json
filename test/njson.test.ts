@@ -44,7 +44,13 @@ describe("NJSON", () => {
     const set = new Set([object1]);
     const object2 = { map, set };
     const uint8 = new Uint8Array([23, 42]);
-    const value = [object2, uint8];
+    // const originalMessage = "original error";
+    // const originalError = new RangeError(originalMessage);
+    const thrownMessage = "thrown error";
+    const thrownError = new EvalError(thrownMessage);
+    // Valid from Node.js v16: need to be refactored
+    // const thrownError = new EvalError(thrownMessage, { cause: originalError });
+    const value = [object2, uint8, thrownError];
 
     const replacer_reviver = function(key: number | string, value: unknown) {
       return value;
@@ -66,11 +72,13 @@ describe("NJSON", () => {
       ["set", set],
       [0, object1],
       ["njson", "njson"],
-      ["1", uint8]
+      ["1", uint8],
+      ["2", thrownError],
+      ["message", thrownMessage]
     ]);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect((replacer1.mock as any).contexts).toStrictEqual([{ "": value }, value, object2, map, object1, object2, set, object1, value]);
+    expect((replacer1.mock as any).contexts).toStrictEqual([{ "": value }, value, object2, map, object1, object2, set, object1, value, value, thrownError]);
 
     expect(replacer2.mock.calls).toStrictEqual([
       ["", value],
@@ -81,7 +89,9 @@ describe("NJSON", () => {
       ["set", set],
       [0, object1],
       ["njson", "njson"],
-      [1, uint8]
+      [1, uint8],
+      [2, thrownError],
+      ["message", thrownMessage]
     ]);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -99,11 +109,13 @@ describe("NJSON", () => {
       ["set", set],
       ["0", object2],
       ["1", uint8],
+      ["message", thrownMessage],
+      ["2", thrownError],
       ["", value]
     ]);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect((reviver1.mock as any).contexts).toStrictEqual([object1, map, object2, object1, set, object2, value, value, { "": value }]);
+    expect((reviver1.mock as any).contexts).toStrictEqual([object1, map, object2, object1, set, object2, value, value, thrownError, value, { "": value }]);
 
     expect(reviver2.mock.calls).toStrictEqual([
       ["njson", "njson"],
@@ -114,6 +126,8 @@ describe("NJSON", () => {
       ["set", set],
       [0, object2],
       [1, uint8],
+      ["message", thrownMessage],
+      [2, thrownError],
       ["", value]
     ]);
 

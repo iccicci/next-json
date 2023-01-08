@@ -60,7 +60,8 @@ This package is intended to offer something as great as JSON... trying to add so
 - &#9745; supports `RegExp`
 - &#9745; supports `Set`
 - &#9745; supports `URL`
-- &#9744; supports `Error`
+- &#9745; supports `Error` with `Error.message`
+- &#9744; supports `Error.cause`, `Error.name` and `Error.stack`
 - &#9744; supports circular references
 
 ## NJSON extends JSON
@@ -245,13 +246,15 @@ treated as `JSON.stringify` does.
 
 # replacer / reviver
 
-Even if `Date`, `Error`, `Int8Array`, `RegExp`, `URL`, `Uint8Array` and `Uint8ClampedArray` are `Object`s, they are
-treated as native values i.e. `replacer` and `reviver` will be never called with one of them as `this` context.<br />
+Even if `Date`, `Int8Array`, `RegExp`, `URL`, `Uint8Array` and `Uint8ClampedArray` are `Object`s, they are treated as
+native values i.e. `replacer` and `reviver` will be never called with one of them as `this` context.<br />
 For `Array`s the `key` argument is obviously a positive integer, but in a `String` form for `JSON` compatibility. This
 can be altered (i.e. in a `Number`) form the `numberKey` option can be used.<br />
 For `Set`s the `key` argument is obviously a positive integer as well, but it is only passed in a `Number` form.<br />
 For `Map`s the `key` argument is once again a positive integer in a `Number` form and the `value` argument is the entry
-in the form `[mapKey, mapValue]`.
+in the form `[mapKey, mapValue]`.<br />
+Regardless from how `Error`'s properties are serialized, the `this` context is the `Error` itself, the `key` can be one
+of `"cause"`, `"message"`, `"name"` or `"stack"` and the `value` is the property value.
 
 # Compatibility
 

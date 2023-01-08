@@ -4,6 +4,10 @@ const match = process.version.match(/^v([0-9]+)\./);
 const version = match ? match[1] : 0;
 const v18it = version >= 18 ? it : it.skip;
 
+function badReplacerReviver(key: number | string, value: unknown) {
+  return [0, "message"].includes(key) ? 23 : value;
+}
+
 describe("options", () => {
   describe("NJSON.parse", () => {
     it("numberKey", () => {
@@ -53,12 +57,22 @@ describe("options", () => {
       expect(njsonResult2).toStrictEqual(jsonResult);
     });
 
+    it("bad reviver for Error", () => {
+      expect(() => NJSON.parse('new Error("njson")', { reviver: badReplacerReviver })).toThrow(Error);
+    });
+
     it("bad reviver for Map", () => {
-      expect(() => NJSON.parse("new Map([[1,2]])", { reviver: (key, value) => (key === 0 ? 23 : value) })).toThrow(Error);
+      expect(() => NJSON.parse("new Map([[1,2]])", { reviver: badReplacerReviver })).toThrow(Error);
     });
 
     it("reviver for Map", () => {
-      expect(NJSON.parse("new Map([[1,2]])", { reviver: (key, value) => (key === 0 ? [3, 4] : value) })).toStrictEqual(new Map([[3, 4]]));
+      expect(NJSON.parse("new Map([[1,2],[3,4],[5,6]])", { reviver: (key, value) => [value, [7, 8], [5, 9]][(key as number) || 0] })).toStrictEqual(
+        new Map([
+          [1, 2],
+          [7, 8],
+          [5, 9]
+        ])
+      );
     });
 
     it("reviver for Set", () => {
@@ -133,8 +147,12 @@ describe("options", () => {
       expect(NJSON.stringify(replaceValue, { replacer: [0, "subObject"] })).toBe(JSON.stringify(replaceValue, [0, "subObject"]));
     });
 
+    it("bad replacer for Error", () => {
+      expect(() => NJSON.stringify(new Error("njson"), { replacer: badReplacerReviver })).toThrow(Error);
+    });
+
     it("bad replacer for Map", () => {
-      expect(() => NJSON.stringify(new Map([[1, 2]]), { replacer: (key, value) => (key === 0 ? 23 : value) })).toThrow(Error);
+      expect(() => NJSON.stringify(new Map([[1, 2]]), { replacer: badReplacerReviver })).toThrow(Error);
     });
 
     it("number space", () => {

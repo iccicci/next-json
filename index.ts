@@ -53,16 +53,28 @@ function recursiveParse(value: unknown, reviver: NjsonFunction, numberKey: boole
 
         value[i] = skip === 1 ? val : reviver.call(value, numberKey ? i : i.toString(), val);
       });
+    } else if(value instanceof Error) {
+      const revived = reviver.call(value, "message", value.message);
+
+      if(typeof revived !== "string") throw new Error("The return value of reviver for an Error message must be a string");
+
+      Object.defineProperty(value, "message", { configurable: true, value: revived, writable: true });
     } else if(value instanceof Map) {
-      Array.from(value).forEach((_, i) => {
+      const elements = Array.from(value);
+      const { length } = elements;
+
+      elements.forEach((_, i) => {
         const revived = reviver.call(value, i, recursiveParse(_, reviver, numberKey, 1));
 
         if(! (revived instanceof Array) || revived.length !== 2) throw new Error("The return value of reviver for a Map entry must be a two elements Array");
 
         const [key, val] = revived;
 
-        if(key !== _[0]) value.delete(_[0]);
-        value.set(key, val);
+        if(key !== _[0]) {
+          for(let l = i; l < length; ++l) value.delete(elements[l][0]);
+          value.set(key, val);
+          for(let l = i + i; l < length; ++l) value.set(...elements[l]);
+        } else value.set(key, val);
       });
     } else if(value instanceof Set) {
       const elements = Array.from(value);
@@ -151,10 +163,12 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
     internalOptions.valueSeparator = ": ";
   }
 
-  return recursiveStringify(internalOptions.replacer.call({ "": value }, "", value), internalOptions, "");
+  return recursiveStringify(internalOptions.replacer.call({ "": value }, "", value), internalOptions, "", 0);
 }
 
-function recursiveStringify(value: unknown, options: NjsonStringifyInternalOptions, space: string, skip = 0): unknown {
+const errors = [EvalError, RangeError, ReferenceError, SyntaxError, TypeError, URIError];
+
+function recursiveStringify(value: unknown, options: NjsonStringifyInternalOptions, space: string, skip: number, override?: unknown): unknown {
   if(value === null) return "null";
   if(value === undefined) return options.undef ? "undefined" : undefined;
 
@@ -187,7 +201,30 @@ function recursiveStringify(value: unknown, options: NjsonStringifyInternalOptio
   const nextSpace = space + options.space;
   const { newLine, numberKey, replacer, valueSeparator } = options;
 
-  const elements = (array: unknown[], stringKey: boolean, skip = 0) =>
+  if(value instanceof Error) {
+    const id = (errors as unknown[]).indexOf(value.constructor);
+    const constructor = id === -1 ? Error : errors[id];
+    const replaced = replacer.call(value, "message", value.message);
+
+    if(typeof replaced !== "string") throw new Error("The return value of replacer for an Error message must be a string");
+
+    return `new ${constructor.name}(${JSON.stringify(replaced)})`;
+
+    /* Valid from Node.js v16: need to be refactored
+    const id = (errors as unknown[]).indexOf(value.constructor);
+    const constructor = id === -1 ? Error : errors[id];
+    const { cause } = value;
+    const replaced = replacer.call(value, "message", value.message);
+
+    if(typeof replaced !== "string") throw new Error("The return value of replacer for an Error message must be a string");
+
+    return `new ${constructor.name}(${cause ? newLine + nextSpace : ""}${JSON.stringify(replaced)}${
+      cause ? `,${newLine}${nextSpace}${recursiveStringify({ cause }, options, nextSpace, 0, value)}${newLine}${space}` : ""
+    })`;
+    */
+  }
+
+  const elements = (array: unknown[], stringKey: boolean, skip: number) =>
     `[${newLine}${array
       .map((_, i) => {
         const replaced = skip === 1 ? _ : replacer.call(value, stringKey ? i.toString() : i, _);
@@ -202,10 +239,10 @@ function recursiveStringify(value: unknown, options: NjsonStringifyInternalOptio
 
   if(value instanceof Array) return value.length ? elements(value, ! numberKey, skip) : "[]";
   if(value instanceof Map) return value.size ? `new Map(${elements(Array.from(value), false, 2)})` : "new Map()";
-  if(value instanceof Set) return value.size ? `new Set(${elements(Array.from(value), false)})` : "new Set()";
+  if(value instanceof Set) return value.size ? `new Set(${elements(Array.from(value), false, 0)})` : "new Set()";
 
   const entries = Object.entries(value)
-    .map(([key, val]) => [key, recursiveStringify(replacer.call(value, key, val), options, nextSpace)])
+    .map(([key, val]) => [key, recursiveStringify(replacer.call(override || value, key, val), options, nextSpace, 0)])
     .filter(_ => _[1] !== undefined);
 
   return entries.length ? `{${newLine}${entries.map(([key, val]) => `${nextSpace}"${key}"${valueSeparator}${val}`).join("," + newLine)}${newLine}${space}}` : "{}";
