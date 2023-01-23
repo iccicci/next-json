@@ -8,7 +8,7 @@ Next JSON format
 
 [![NPM version][npm-badge]][npm-url]
 [![NPM downloads][npm-downloads-badge]][npm-url]
-[![Stars][stars-badge]][github-url]
+[![Stars][stars-badge]][stars-url]
 
 [![Types][types-badge]][npm-url]
 [![Dependents][deps-badge]][npm-url]
@@ -25,6 +25,7 @@ Next JSON format
 [npm-badge]: https://badgen.net/npm/v/next-json?color=green&icon=npm&cache=300
 [npm-url]: https://www.npmjs.com/package/next-json
 [stars-badge]: https://badgen.net/github/stars/iccicci/next-json?icon=github&cache=300
+[stars-url]: https://github.com/iccicci/next-json/stargazers
 [travis-badge]: https://badgen.net/travis/iccicci/next-json?icon=travis&cache=300
 [travis-url]: https://app.travis-ci.com/github/iccicci/next-json
 [types-badge]: https://badgen.net/npm/types/next-json?color=green&icon=typescript&cache=300

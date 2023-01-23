@@ -77,8 +77,7 @@ describe("NJSON", () => {
       ["message", thrownMessage]
     ]);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect((replacer1.mock as any).contexts).toStrictEqual([{ "": value }, value, object2, map, object1, object2, set, object1, value, value, thrownError]);
+    expect(replacer1.mock.contexts).toStrictEqual([{ "": value }, value, object2, map, object1, object2, set, object1, value, value, thrownError]);
 
     expect(replacer2.mock.calls).toStrictEqual([
       ["", value],
@@ -94,8 +93,7 @@ describe("NJSON", () => {
       ["message", thrownMessage]
     ]);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect((replacer2.mock as any).contexts).toStrictEqual((replacer1.mock as any).contexts);
+    expect(replacer2.mock.contexts).toStrictEqual(replacer1.mock.contexts);
 
     expect(NJSON.parse(plain, { reviver: reviver1 })).toStrictEqual(value);
     expect(NJSON.parse(space, { numberKey: true, reviver: reviver2 })).toStrictEqual(value);
@@ -114,8 +112,7 @@ describe("NJSON", () => {
       ["", value]
     ]);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect((reviver1.mock as any).contexts).toStrictEqual([object1, map, object2, object1, set, object2, value, value, thrownError, value, { "": value }]);
+    expect(reviver1.mock.contexts).toStrictEqual([object1, map, object2, object1, set, object2, value, value, thrownError, value, { "": value }]);
 
     expect(reviver2.mock.calls).toStrictEqual([
       ["njson", "njson"],
@@ -131,7 +128,6 @@ describe("NJSON", () => {
       ["", value]
     ]);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect((reviver2.mock as any).contexts).toStrictEqual((reviver1.mock as any).contexts);
+    expect(reviver2.mock.contexts).toStrictEqual(reviver1.mock.contexts);
   });
 });

@@ -46,12 +46,10 @@ describe("options", () => {
       const njsonResult2 = NJSON.parse(value, { reviver: njsonReviver2 });
 
       expect(njsonReviver1.mock.calls).toStrictEqual(jsonReviver.mock.calls);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expect((njsonReviver1.mock as any).contexts).toStrictEqual((njsonReviver1.mock as any).contexts);
+      expect(njsonReviver1.mock.contexts).toStrictEqual(njsonReviver1.mock.contexts);
       expect(njsonReviver1.mock.results).toStrictEqual(jsonReviver.mock.results);
       expect(njsonReviver2.mock.calls).toStrictEqual(jsonReviver.mock.calls);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expect((njsonReviver2.mock as any).contexts).toStrictEqual((njsonReviver1.mock as any).contexts);
+      expect(njsonReviver2.mock.contexts).toStrictEqual(njsonReviver1.mock.contexts);
       expect(njsonReviver2.mock.results).toStrictEqual(jsonReviver.mock.results);
       expect(njsonResult1).toStrictEqual(jsonResult);
       expect(njsonResult2).toStrictEqual(jsonResult);
@@ -129,12 +127,10 @@ describe("options", () => {
       const njsonResult2 = NJSON.stringify(spaceValue, { replacer: njsonReplacer2 });
 
       expect(njsonReplacer1.mock.calls).toStrictEqual(jsonReplacer.mock.calls);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expect((njsonReplacer1.mock as any).contexts).toStrictEqual((njsonReplacer1.mock as any).contexts);
+      expect(njsonReplacer1.mock.contexts).toStrictEqual(njsonReplacer1.mock.contexts);
       expect(njsonReplacer1.mock.results).toStrictEqual(jsonReplacer.mock.results);
       expect(njsonReplacer2.mock.calls).toStrictEqual(jsonReplacer.mock.calls);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expect((njsonReplacer2.mock as any).contexts).toStrictEqual((njsonReplacer1.mock as any).contexts);
+      expect(njsonReplacer2.mock.contexts).toStrictEqual(njsonReplacer1.mock.contexts);
       expect(njsonReplacer2.mock.results).toStrictEqual(jsonReplacer.mock.results);
       expect(njsonResult1).toBe(jsonResult);
       expect(njsonResult2).toBe(jsonResult);
