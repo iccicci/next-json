@@ -1,0 +1,38 @@
+((A, B, C, D) => {
+  A["array4"] = B;
+  A["map4"] = C;
+  A["object5"] = A;
+  A["set3"] = D;
+  B[1] = A;
+  B[2] = C;
+  B[3] = D;
+  B[4] = B;
+  C.set(
+    "B",
+    A
+  );
+  C.set(
+    B,
+    D
+  );
+  D.add(A);
+  D.add(B);
+  D.add(C);
+  return A
+})(
+  {
+    "njson": "test"
+  },
+  [
+    1
+  ],
+  new Map([
+    [
+      "A",
+      "njson"
+    ]
+  ]),
+  new Set([
+    "a"
+  ])
+)

@@ -1,0 +1,11 @@
+((A, B) => {
+  B[0] = [
+    A,
+    B
+  ];
+  B[1] = A;
+  return B
+})(
+  "long string",
+  []
+)

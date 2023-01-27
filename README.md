@@ -11,13 +11,14 @@ Next JSON format
 [![Stars][stars-badge]][stars-url]
 
 [![Types][types-badge]][npm-url]
-[![Dependents][deps-badge]][npm-url]
+[![Dependents][deps-badge]][deps-url]
 [![Donate][donate-badge]][donate-url]
 
 [code-badge]: https://codeclimate.com/github/iccicci/next-json/badges/gpa.svg
 [code-url]: https://codeclimate.com/github/iccicci/next-json
 [cover-badge]: https://codeclimate.com/github/iccicci/next-json/badges/coverage.svg
 [deps-badge]: https://badgen.net/npm/dependents/next-json?icon=npm&cache=300
+[deps-url]: https://www.npmjs.com/package/next-json?activeTab=dependents
 [donate-badge]: https://badgen.net/badge/donate/bitcoin?icon=bitcoin&cache=300
 [donate-url]: https://blockchain.info/address/1Md9WFAHrXTb3yPBwQWmUfv2RmzrtbHioB
 [github-url]: https://github.com/iccicci/next-json
@@ -52,18 +53,18 @@ This package is intended to offer something as great as JSON... trying to add so
 - &#9745; extends JSON
 - &#9745; supports C style comments
 - &#9745; supports escaped new line in strings
+- &#9745; supports circular and repeated references
 - &#9745; supports `undefined`
 - &#9745; supports `-0`, `NaN` and `Infinity`
 - &#9745; supports `BigInt`
 - &#9745; supports `Date`
-- &#9745; supports `Int8Array`, `Uint8Array` and `Uint8ClampedArray`
 - &#9745; supports `Map`
 - &#9745; supports `RegExp`
 - &#9745; supports `Set`
+- &#9745; supports `TypedArray`s
 - &#9745; supports `URL`
-- &#9745; supports `Error` with `Error.message`
+- &#9745; supports `Error` with `Error.message` (repeated references not yet supported)
 - &#9744; supports `Error.cause`, `Error.name` and `Error.stack`
-- &#9744; supports circular references
 
 ## NJSON extends JSON
 
@@ -88,11 +89,12 @@ code, but only the subset produced by `NJSON.stringify` (otherwise it would have
 ## Not supported by design
 
 **NJSON** do not supports some `Object`s by design; when one of them is encountered during the serialization process
-they will be simply omitted (as `JSON` does). Follow the reasons.
+`NJSON` tries to act as `JSON` does. Nonetheless they take part in the _repeated referrence algorithm_ anyway. Follow
+the details.
 
 ### ArrayBuffer
 
-`ArrayBuffer`s can't be manipulated by JavaScript design: `Int8Array`, `Uint8Array` or `Uint8ClampedArray` can be used.
+`ArrayBuffer`s can't be manipulated by JavaScript design: they are serialized as empty objects as `JSON` does.
 
 ### Function
 
@@ -111,8 +113,8 @@ distinct systems is something almost meaningless.
 
 ### TypedArray
 
-Except for `Int8Array`, `Uint8Array` and `Uint8ClampedArray`, `TypedArray`s are platform dependant: trying to transfer
-one of them between different architectures could result in unexpected problems.
+**Note:** except for `Int8Array`, `Uint8Array` and `Uint8ClampedArray`, `TypedArray`s are platform dependant: they are
+supported, but trying to transfer one of them between different architectures may be source of unexpected problems.
 
 # Installation
 
@@ -204,12 +206,15 @@ parameter of `JSON.parse`. See also [replacer / reviver](#replacer--reviver) for
   Alters the type of the `key` argument for `replacer`. **Default:** `false`.
 - [`replacer`](#njsonstringifyoptionsreplacer):
   [&lt;Function>](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function) |
-  [&lt;Array>](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array) Alters the
-  behavior of the serialization process. **Default:** `null`.
+  [&lt;Array>](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array) | `null` Alters
+  the behavior of the serialization process. **Default:** `null`.
 - [`space`](#njsonstringifyoptionsspace):
   [&lt;number>](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#Number_type) |
-  [&lt;string>](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#String_type)
-  Specifies the indentation. **Default:** `null`.
+  [&lt;string>](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#String_type) | `null` Specifies
+  the indentation. **Default:** `null`.
+- [`stringLength`](#njsonstringifyoptionsstringlength):
+  [&lt;number>](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#Number_type) | `null` Makes
+  `String`s to be treated as references. **Default:** `null`.
 - [`undef`](#njsonstringifyoptionsundef):
   [&lt;boolean>](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#Boolean_type)
   Specifies the `undefined` behavior. **Default:** `true`.
@@ -240,6 +245,11 @@ As the
 [`space`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify#parameters)
 parameter of `JSON.serialize`.
 
+### NjsonStringifyOptions.stringLength
+
+If specified, `String`s which `length` is greater or equal to the specified value take part in the _repeated referrence
+algorithm_.
+
 ### NjsonStringifyOptions.undef
 
 For default `NJSON.stringify` serializes `undefined` values as well. If set to `false`, `undefined` values are
@@ -247,15 +257,44 @@ treated as `JSON.stringify` does.
 
 # replacer / reviver
 
-Even if `Date`, `Int8Array`, `RegExp`, `URL`, `Uint8Array` and `Uint8ClampedArray` are `Object`s, they are treated as
-native values i.e. `replacer` and `reviver` will be never called with one of them as `this` context.<br />
-For `Array`s the `key` argument is obviously a positive integer, but in a `String` form for `JSON` compatibility. This
-can be altered (i.e. in a `Number`) form the `numberKey` option can be used.<br />
-For `Set`s the `key` argument is obviously a positive integer as well, but it is only passed in a `Number` form.<br />
-For `Map`s the `key` argument is once again a positive integer in a `Number` form and the `value` argument is the entry
-in the form `[mapKey, mapValue]`.<br />
+Even if `Date`, `RegExp`, `TypedArray`s and `URL` are `Object`s, they are treated as native values i.e. `replacer` and
+`reviver` will be never called with one of them as `this` context.
+
+### Array
+
+For `Array`s the `key` argument is a positive integer, but in a `String` form for `JSON` compatibility. This can be
+altered (i.e. in a `Number` form) through the `numberKey` option.
+
+### Error
+
 Regardless from how `Error`'s properties are serialized, the `this` context is the `Error` itself, the `key` can be one
-of `"cause"`, `"message"`, `"name"` or `"stack"` and the `value` is the property value.
+of `"cause"`, `"message"`, `"name"` or `"stack"` and the `value` is the relative property value.
+
+### Map
+
+`Map`'s keys can be `Function`s and `Symbol`s; for `Map`s the `key` argument is a positive integer in a `Number` form
+and the `value` argument is the entry in the form `[mapKey, mapValue]`. If `replacer` or `reviver` do not return a two
+elements array, the value is omitted; this gives a way to _replace_/_revive_ keys which can't be serialized.
+
+### Set
+
+For `Set`s the `key` argument is a positive integer and it is passed in a `Number` form.
+
+### TypedArray
+
+Unlike `JSON`, `NJSON` does not call `replacer` and `reviver` for each element.
+Except for `Int8Array`, `Uint8Array` and `Uint8ClampedArray`, `TypedArray`s are platform dependant: trying to transfer
+one of them between different architectures may be source of unexpected problems.
+
+# circular / repeated references
+
+Regardless of whether they are omitted, serialized as native values or not, every `Object`s (but `null`), `Function`s
+and `Symbol`s take part in the _repeated referrence algorithm_; long `String`s can take part as well (refer to
+[`NjsonStringifyOptions.stringLength`](#njsonstringifyoptionsstringlength) for details).<br />
+When a repeated reference is encountered, `replacer` and `reviver` are called against the reference, but it is not
+called recursively against its properies. If a property of a repeted reference is changed, the same change has effect
+in all other occurences of the same reference.<br />
+Circular references are simply special cases of repeated references.
 
 # Compatibility
 

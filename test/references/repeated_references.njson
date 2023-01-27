@@ -1,0 +1,16 @@
+((A, B, C) => {
+  return [
+    A,
+    B,
+    C,
+    A,
+    B,
+    C
+  ]
+})(
+  new Uint8Array([110,106,115,111,110]),
+  new Map(),
+  new Set([
+    "njson"
+  ])
+)

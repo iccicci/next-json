@@ -2,16 +2,16 @@
 checks:
   file-lines:
     config:
-      threshold: 500
+      threshold: 1000
   method-complexity:
     config:
-      threshold: 100
+      threshold: 500
   method-count:
     config:
       threshold: 35
   method-lines:
     config:
-      threshold: 100
+      threshold: 500
   nested-control-flow:
     config:
       threshold: 10

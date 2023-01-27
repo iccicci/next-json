@@ -1,0 +1,11 @@
+((A) => {
+  return [
+    null,
+    null,
+    new RangeError("original error"),
+    A,
+    A
+  ]
+})(
+  new EvalError("thrown error")
+)

@@ -20,12 +20,15 @@
 
 // ----- 2. NJSON Grammar -----
 
-NJSON_text = wss @value
+NJSON = wss @(value / function)
 
 ws  "white space"  = [ \t\n\r] / "//" (![\n] .)* / "/*" (!"*/" .)* "*/"
 wss "white spaces" = ws*
 colon              = ":" wss
 comma              = "," wss
+dot                = "." wss
+equal              = "=" wss
+semicolon          = ";" wss
 open_round         = "(" wss
 closed_round       = ")" wss
 open_square        = "[" wss
@@ -35,7 +38,14 @@ closed_brace       = "}" wss
 
 // ----- 3. Values -----
 
-value = @(array / constructor / false / null / number / object / string / true / undefined) wss
+value =
+  (@(array / constructor / false / null / number / object / string / true / undefined) wss) /
+  identifier:identifier
+  {
+    if(! options!.body) throw peg$buildSimpleError("Unexpected identifier in this context.", location());
+
+    return options!.running ? options!.vars[identifier] : identifier;
+  }
 
 false     = "false"     { return false;     }
 null      = "null"      { return null;      }
@@ -175,9 +185,10 @@ error =
   open_round message:string closed_round
   {
     const constructor = errors[err as Errors];
+    const props = { configurable: true, value: undefined, writable: true };
     const val = new constructor(message);
 
-    return Object.defineProperty(val, "stack", { configurable: true, value: undefined, writable: true });
+    return Object.defineProperties(val, { "cause": props, "stack": props });
   }
   /* Valid from Node.js v16: need to be refactored
   open_round message:string cause:(comma open_brace '"cause"' wss colon @value closed_brace)? closed_round
@@ -188,3 +199,143 @@ error =
     return Object.defineProperty(val, "stack", { configurable: true, value: undefined, writable: true });
   }
   */
+
+// ----- 15. Repeated references -----
+
+function =
+  open_round parameters "=>" wss body closed_round arguments
+  {
+    Object.assign(options!, { body: true, running: true, startRule: "statement" });
+
+    for(const statement of options!.statements) {
+      options!.offset = statement[1];
+
+      const ret = peg$parse(statement[0], options);
+
+      if(ret instanceof Array) return ret[0];
+    }
+  }
+
+identifier =
+  identifier:($[A-Z]+) wss
+  {
+    const { offset, running, vars } = options!;
+
+    if(! running) return identifier;
+    if(! (identifier in vars)) throw peg$buildSimpleError(`Undeclared variable ${identifier}.`, addLocations(offset, location()));
+
+    return identifier;
+  }
+
+parameters =
+  open_round
+  params:(head:identifier tail:(comma @identifier)* { return [head, ...tail]; })
+  closed_round
+  {
+    const vars: any = {};
+
+    Object.assign(options!, { body: true, params, types: {}, vars });
+    for(const param of params as string[]) vars[param] = undefined;
+
+    return null;
+  }
+
+body =
+  open_brace
+  statements:(head:statement tail:(semicolon @statement)* { return [head, ...tail]; })
+  closed_brace
+  {
+    Object.assign(options!, { body: false, statements });
+  }
+
+statement = assignment / method / return
+
+assignment =
+  identifier:identifier
+  open_square
+  index:(index:(int:integer { return [int, false]; } / str:string { return [str, true]; }) { return [...index, location()]; })
+  closed_square
+  equal
+  value:value
+  {
+    const { offset, running, types, vars } = options!;
+
+    if(! running) return [text(), location()];
+
+    const type = types[identifier];
+    let [idx, str, where] = index;
+
+    if(type === "Array") {
+      if(str) throw peg$buildSimpleError(`Expected integer but ${JSON.stringify(idx)} found.`, addLocations(offset, where));
+
+      idx = parseInt(idx, 10);
+    } else if(type === "Error" || type === "Object") {
+      if(! str) throw peg$buildSimpleError(`Expected string but "${idx}" found.`, addLocations(offset, where));
+    } else throw peg$buildSimpleError(`Can't assign property to ${type}.`, addLocations(offset, location()));
+
+    vars[identifier][idx] = value;
+  }
+
+method =
+  identifier:identifier
+  dot
+  method:(
+    (
+      "add" wss
+      open_round
+      value:value
+      {
+        return { name: "add", value };
+      }
+    ) /
+    (
+      "set" wss
+      open_round
+      key:value
+      comma
+      value:value
+      {
+        return { key, name: "set", value };
+      }
+    )
+  )
+  closed_round
+  {
+    const { offset, running, types, vars } = options!;
+
+    if(! running) return [text(), location()];
+
+    const { key, name, value } = method;
+    const type = types[identifier];
+
+    if(name === "add") {
+      if(type !== "Set") throw peg$buildSimpleError(`Can't call method "add" on ${type}.`, addLocations(offset, location()));
+
+      vars[identifier].add(value);
+    } else {
+      if(type !== "Map") throw peg$buildSimpleError(`Can't call method "set" on ${type}.`, addLocations(offset, location()));
+
+      vars[identifier].set(key, value);
+    }
+  }
+
+return =
+  "return" wss value:value
+  {
+    return options!.running ? [value] : [text(), location()];
+  }
+
+arguments =
+  open_round
+  args:(head:value tail:(comma @value)* { return [head, ...tail]; })
+  closed_round
+  {
+    const { params, types, vars } = options!;
+
+    if(params.length !== args.length) throw peg$buildSimpleError(`Expected ${params.length} arguments but ${args.length} found.`, location());
+
+    for(let i = 0; i < args.length; ++i) {
+      types[params[i]] = args[i].constructor.name;
+      vars[params[i]] = args[i];
+    }
+  }

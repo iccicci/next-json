@@ -1,0 +1,11 @@
+((A) => {
+  A["object2"] = {
+    "object1": A,
+    "test": "njson"
+  };
+  return A
+})(
+  {
+    "njson": "test"
+  }
+)

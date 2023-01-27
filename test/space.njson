@@ -4,13 +4,13 @@
       [
         "njson",
         {
-          "njson": "njson"
+          "njson": "test"
         }
       ]
     ]),
     "set": new Set([
       {
-        "njson": "njson"
+        "test": "njson"
       }
     ])
   },
