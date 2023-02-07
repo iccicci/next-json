@@ -3,6 +3,7 @@
     "alwaysStrict": true,
     "declaration": false,
     "esModuleInterop": true,
+    "lib": ["ES2022"],
     "moduleResolution": "Node",
     "noImplicitAny": true,
     "noImplicitReturns": true,

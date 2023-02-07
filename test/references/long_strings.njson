@@ -1,9 +1,11 @@
 ((A, B) => {
-  B[0] = [
-    A,
-    B
-  ];
-  B[1] = A;
+  B.push(
+    [
+      A,
+      B
+    ],
+    A
+  );
   return B
 })(
   "long string",

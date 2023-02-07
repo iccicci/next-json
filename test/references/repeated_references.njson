@@ -1,5 +1,7 @@
 ((A, B, C) => {
   return [
+    new Set(),
+    new Map(),
     A,
     B,
     C,

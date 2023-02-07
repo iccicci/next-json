@@ -1,14 +1,14 @@
 ((A) => {
-  A.add(new Set([
-    23,
-    42,
-    A,
-    {
-      "test": "njson"
-    }
-  ]));
-  A.add(new Int8Array([23,42]));
   return A
+    .add(new Set([
+      23,
+      42,
+      A,
+      {
+        "test": "njson"
+      }
+    ]))
+    .add(new Int8Array([23,42]))
 })(
   new Set([
     "njson"

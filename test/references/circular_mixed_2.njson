@@ -1,23 +1,29 @@
 ((A, B, C, D) => {
-  A["array4"] = C;
-  A["map4"] = B;
-  A["object5"] = A;
-  A["set3"] = D;
-  B.set(
-    "B",
-    A
+  C.push(
+    Object.assign(
+      A,
+      {
+        "array4": C,
+        "map4": B
+          .set(
+            "B",
+            A
+          )
+          .set(
+            C,
+            D
+              .add(A)
+              .add(C)
+              .add(B)
+          ),
+        "object5": A,
+        "set3": D
+      }
+    ),
+    B,
+    D,
+    C
   );
-  B.set(
-    C,
-    D
-  );
-  C[1] = A;
-  C[2] = B;
-  C[3] = D;
-  C[4] = C;
-  D.add(A);
-  D.add(C);
-  D.add(B);
   return B
 })(
   {

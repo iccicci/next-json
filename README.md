@@ -42,9 +42,9 @@ JSON is awesome mainly for two reasons:
 
 ... but it has some limitations:
 
-- do not supports `undefined` values,
-- do not supports `BigInt` numbers,
-- do not supports many other features...
+- doesn't support `undefined` values,
+- doesn't support `BigInt` numbers,
+- doesn't support many other features...
 
 This package is intended to offer something as great as JSON... trying to add something more.
 
@@ -53,18 +53,18 @@ This package is intended to offer something as great as JSON... trying to add so
 - &#9745; extends JSON
 - &#9745; supports C style comments
 - &#9745; supports escaped new line in strings
+- &#9745; supports trailing commas
 - &#9745; supports circular and repeated references
 - &#9745; supports `undefined`
 - &#9745; supports `-0`, `NaN` and `Infinity`
 - &#9745; supports `BigInt`
 - &#9745; supports `Date`
+- &#9745; supports `Error` (with [exception](#the-error-exception))
 - &#9745; supports `Map`
 - &#9745; supports `RegExp`
 - &#9745; supports `Set`
 - &#9745; supports `TypedArray`s
 - &#9745; supports `URL`
-- &#9745; supports `Error` with `Error.message` (repeated references not yet supported)
-- &#9744; supports `Error.cause`, `Error.name` and `Error.stack`
 
 ## NJSON extends JSON
 
@@ -116,6 +116,36 @@ distinct systems is something almost meaningless.
 **Note:** except for `Int8Array`, `Uint8Array` and `Uint8ClampedArray`, `TypedArray`s are platform dependant: they are
 supported, but trying to transfer one of them between different architectures may be source of unexpected problems.
 
+## The `Error` exception
+
+`Error`'s are special objects. By specifications the properties `cause`, `message`, `name` and `stack` are not
+enumerable, **NJSON** serializes them as any other property. This, plus the nature of the `stack` property, origantes
+the `Error` exception to the rule that an _NJSON encoded string_ produces exactly the same value if parsed or
+evaluated.
+
+- `cause`:
+
+  - through `NJSON.parse` the result is **a not enumerable** property;
+  - throug `eval` the result may be **an enumerable** or **a not enumerable** property depending on the running
+    JavaScript engine;
+
+- `stack`:
+
+  - if absent:
+
+    - through `NJSON.parse` the result is **a not enumerable** property with value a _pseudo-stack_;
+    - throug `eval` the result is the standard `stack` property for the running JavaScript engine;
+
+  - if present:
+
+    - through `NJSON.parse` the result is **a not enumerable** property;
+    - throug `eval` the result may be **an enumerable** or **a not enumerable** property depending on the running
+      JavaScript engine;
+
+The only option in my mind to avoid this exception is the use of `Object.defineProperties`, but it would increase both
+the complexity of the parser and the size of the produced serialized string. Maybe in the future... configurable
+through an option... if this can't be really tolerated.
+
 # Installation
 
 With [npm](https://www.npmjs.com/package/next-json):
@@ -129,7 +159,7 @@ npm install --save next-json
 ### JavaScript
 
 ```javascript
-import { NJSON, NjsonParseOptions, NjsonStringifyOptions } from "next-json";
+import { NJSON } from "next-json";
 
 const serialized = NJSON.stringify({ some: "value" });
 const deserialized = NJSON.parse(serialized);
@@ -140,9 +170,28 @@ const deserialized = NJSON.parse(serialized);
 ```typescript
 import { NJSON, NjsonParseOptions, NjsonStringifyOptions } from "next-json";
 
-const serialized: string = NJSON.stringify({ some: "value" });
-const deserialized: { some: string } = NJSON.parse<{ some: string }>(serialized);
+const serialized = NJSON.stringify({ some: "value" });
+const deserialized = NJSON.parse<{ some: string }>(serialized);
 ```
+
+# Example
+
+```javascript
+const obj = { test: Infinity };
+const set = new Set();
+const arr = [NaN, obj, set];
+
+set.add(obj);
+set.add(arr);
+arr.push(arr);
+
+console.log(NJSON.stringify(arr));
+// ((A,B)=>{B.push(A,new Set([A,B]),B);return B})({"test":Infinity},[NaN])
+```
+
+# MIME type
+
+The proposed MIME type for NJSON format is: `application/njson` .
 
 # API
 
@@ -204,10 +253,16 @@ parameter of `JSON.parse`. See also [replacer / reviver](#replacer--reviver) for
 - [`numberKey`](#njsonstringifyoptionsnumberkey):
   [&lt;boolean>](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#Boolean_type)
   Alters the type of the `key` argument for `replacer`. **Default:** `false`.
+- [`omitStack`](#njsonstringifyoptionsomitstack):
+  [&lt;boolean>](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#Boolean_type)
+  Specifies if to stringify `stack` for `Error`s. **Default:** `flase`.
 - [`replacer`](#njsonstringifyoptionsreplacer):
   [&lt;Function>](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function) |
   [&lt;Array>](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array) | `null` Alters
   the behavior of the serialization process. **Default:** `null`.
+- [`sortKeys`](#njsonstringifyoptionssortkeys):
+  [&lt;boolean>](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#Boolean_type)
+  Specifies whether to sort `Object` keys. **Default:** `false`.
 - [`space`](#njsonstringifyoptionsspace):
   [&lt;number>](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#Number_type) |
   [&lt;string>](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#String_type) | `null` Specifies
@@ -233,11 +288,22 @@ method used.
 
 If `true`, the `replacer` function, for `Array` elements, will be called with the `key` argument in a `Number` form.
 
+### NjsonStringifyOptions.omitStack
+
+For default `NJSON.stringify` serializes the `stack` property for `Error`s. If set to `true`, the property is omitted
+from the serialized representation.
+
 ### NjsonStringifyOptions.replacer
 
 As the
 [`replacer`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify#parameters)
 parameter of `JSON.serialize`. See also [replacer / reviver](#replacer--reviver) for NJSON specific details.
+
+### NjsonStringifyOptions.sortKeys
+
+For default **NJSON** stringifies (and replaces as well) `Object` keys in the order they appear in the `Object` itself.
+If set to `true`, `Object` keys are sorted alphabetically before both the processes. This can be useful to compare two
+references: using this option, the stringified representation of two deep equal references are two equal strings.
 
 ### NjsonStringifyOptions.space
 
@@ -265,16 +331,11 @@ Even if `Date`, `RegExp`, `TypedArray`s and `URL` are `Object`s, they are treate
 For `Array`s the `key` argument is a positive integer, but in a `String` form for `JSON` compatibility. This can be
 altered (i.e. in a `Number` form) through the `numberKey` option.
 
-### Error
-
-Regardless from how `Error`'s properties are serialized, the `this` context is the `Error` itself, the `key` can be one
-of `"cause"`, `"message"`, `"name"` or `"stack"` and the `value` is the relative property value.
-
 ### Map
 
 `Map`'s keys can be `Function`s and `Symbol`s; for `Map`s the `key` argument is a positive integer in a `Number` form
-and the `value` argument is the entry in the form `[mapKey, mapValue]`. If `replacer` or `reviver` do not return a two
-elements array, the value is omitted; this gives a way to _replace_/_revive_ keys which can't be serialized.
+and the `value` argument is the entry in the form `[mapKey, mapValue]`. This gives a way to _replace_/_revive_ keys
+which can't be serialized. If `replacer` or `reviver` do not return a two elements array, the value is omitted.
 
 ### Set
 

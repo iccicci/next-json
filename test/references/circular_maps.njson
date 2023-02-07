@@ -1,50 +1,50 @@
 ((A, B) => {
-  B.set(
-    5,
-    new Map([
-      [
-        "test",
-        "njson"
-      ],
-      [
-        {},
-        B
-      ],
-      [
-        A,
-        3
-      ]
-    ])
-  );
-  B.set(
-    "test",
-    "njson"
-  );
-  B.set(
-    new Map([
-      [
-        [],
-        A
-      ],
-      [
-        B,
-        4
-      ],
-      [
-        "test",
-        "njson"
-      ]
-    ]),
-    [
+  return B
+    .set(
+      5,
+      new Map([
+        [
+          "test",
+          "njson"
+        ],
+        [
+          {},
+          B
+        ],
+        [
+          A,
+          3
+        ]
+      ])
+    )
+    .set(
       "test",
       "njson"
-    ]
-  );
-  B.set(
-    6,
-    A
-  );
-  return B
+    )
+    .set(
+      new Map([
+        [
+          [],
+          A
+        ],
+        [
+          B,
+          4
+        ],
+        [
+          "test",
+          "njson"
+        ]
+      ]),
+      [
+        "test",
+        "njson"
+      ]
+    )
+    .set(
+      6,
+      A
+    )
 })(
   {
     "test": "njson"

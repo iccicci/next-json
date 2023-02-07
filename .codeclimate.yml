@@ -1,11 +1,16 @@
 ---
 checks:
+  argument-count:
+    config:
+      threshold: 5
+  complex-logic:
+    enabled: false
   file-lines:
     config:
       threshold: 1000
   method-complexity:
     config:
-      threshold: 500
+      threshold: 600
   method-count:
     config:
       threshold: 35
@@ -19,8 +24,7 @@ checks:
     config:
       threshold: 30
   similar-code:
-    config:
-      threshold: 60
+    enabled: false
 engines:
   duplication:
     enabled: true

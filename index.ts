@@ -11,7 +11,9 @@ export interface NjsonParseOptions {
 export interface NjsonStringifyOptions {
   date?: "iso" | "string" | "time" | "utc";
   numberKey?: boolean;
+  omitStack?: boolean;
   replacer?: NjsonReplacer;
+  sortKeys?: boolean;
   space?: number | string;
   stringLength?: number;
   undef?: boolean;
@@ -34,7 +36,7 @@ function parse<T = unknown>(text: string, options?: NjsonParseOptions | NjsonFun
       if(value && typeof value === "object" && ! (value instanceof Date) && ! (value instanceof RegExp) && ! (value instanceof URL) && ! ArrayBuffer.isView(value) && references.indexOf(value) === -1) {
         references.push(value);
 
-        if(value instanceof Array) value.forEach((_, i) => (value[i] = revive(value, numberKey ? i : i.toString(), _, skipNext)));
+        if(value instanceof Array) for(const [i, _] of value.entries()) value[i] = revive(value, numberKey ? i : i.toString(), _, skipNext);
         else if(value instanceof Error) {
           const revived = revive(value, "message", value.message);
 
@@ -43,7 +45,7 @@ function parse<T = unknown>(text: string, options?: NjsonParseOptions | NjsonFun
           const elements = Array.from(value);
           const { length } = elements;
 
-          elements.forEach((_, i) => {
+          for(const [i, _] of elements.entries()) {
             const revived = revive(value, i, _, false, true);
             let remove = false;
             let replace = false;
@@ -62,12 +64,12 @@ function parse<T = unknown>(text: string, options?: NjsonParseOptions | NjsonFun
               if(replace) value.set(key, val);
               for(let l = i + i; l < length; ++l) value.set(...elements[l]);
             }
-          });
+          }
         } else if(value instanceof Set) {
           const elements = Array.from(value);
           const { length } = elements;
 
-          elements.forEach((_, i) => {
+          for(const [i, _] of elements.entries()) {
             const revived = revive(value, i, _);
 
             if(revived !== _) {
@@ -75,8 +77,8 @@ function parse<T = unknown>(text: string, options?: NjsonParseOptions | NjsonFun
               value.add(revived);
               for(let l = i + i; l < length; ++l) value.add(elements[l]);
             }
-          });
-        } else Object.entries(value).forEach(([key, val]) => ((value as Record<string, unknown>)[key] = revive(value, key, val)));
+          }
+        } else for(const [key, val] of Object.entries(value)) (value as Record<string, unknown>)[key] = revive(value, key, val);
       }
 
       return skip ? value : reviver.call(context, key, value);
@@ -98,27 +100,20 @@ function parse<T = unknown>(text: string, options?: NjsonParseOptions | NjsonFun
 }
 
 interface ReplacerRef {
+  already?: boolean;
   argument: () => boolean;
   elements?: unknown;
   exclude?: boolean;
   found?: boolean;
   identifier?: string;
-  isReference: boolean;
-  statements?: string[];
+  statement?: () => string;
   stringified?: string;
-  stringify: (space: string, body?: boolean, first?: boolean) => string;
+  stringify: (currIndent: string, body?: boolean, first?: boolean) => string;
 }
 
-function argumentDefault(this: ReplacerRef): boolean {
+function argument(this: ReplacerRef): boolean {
   if(this.identifier) return false;
   if((this.elements as ReplacerRef[]).some(_ => ! _.argument())) return false;
-
-  return true;
-}
-
-function argumentObject(this: ReplacerRef): boolean {
-  if(this.identifier) return false;
-  if((this.elements as [string, ReplacerRef][]).some(_ => ! _[1].argument())) return false;
 
   return true;
 }
@@ -132,7 +127,7 @@ function excludeRef(): ReplacerRef {
     return "null";
   }
 
-  return { argument, exclude: true, isReference: false, stringify };
+  return { argument, exclude: true, stringify };
 }
 
 function nativeRef(stringified: string): ReplacerRef {
@@ -144,11 +139,7 @@ function nativeRef(stringified: string): ReplacerRef {
     return this.identifier && body ? this.identifier : this.stringified!;
   }
 
-  return { argument, isReference: false, stringified, stringify };
-}
-
-function mapDefault(ref: ReplacerRef, nextSpace: string, body?: boolean) {
-  return (ref.elements as ReplacerRef[]).map(_ => _.stringify(nextSpace, body));
+  return { argument, stringified, stringify };
 }
 
 const errors = [EvalError, RangeError, ReferenceError, SyntaxError, TypeError, URIError];
@@ -159,11 +150,13 @@ function stringify(value: unknown, replacer?: NjsonReplacer | null, space?: numb
 function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplacer | null, space?: number | string) {
   let newLine = "";
   let numberKey = false;
+  let omitStack = false;
   let replacer: NjsonFunction | undefined;
+  let separator = "";
+  let sortKeys = false;
   let stringLength: number | undefined = undefined;
   let stringifyDate: (value: Date) => string = value => value.getTime().toString();
   let undef = true;
-  let separator = "";
 
   if(options) {
     let arrayReplacer: (number | string)[] | undefined = undefined;
@@ -176,15 +169,15 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
         else if(options.date === "utc") stringifyDate = value => `"${value.toUTCString()}"`;
 
         if(options.numberKey) numberKey = true;
+        if(typeof options.stringLength === "number") stringLength = options.stringLength;
+        if(options.omitStack === true) omitStack = true;
+        if(options.sortKeys === true) sortKeys = true;
+        if(options.undef === false) undef = false;
 
         if(typeof options.replacer === "function") replacer = options.replacer;
         else if(options.replacer instanceof Array) arrayReplacer = options.replacer;
 
         space = options.space;
-
-        if(typeof options.stringLength === "number") stringLength = options.stringLength;
-
-        if(options.undef === false) undef = false;
       }
     }
 
@@ -213,6 +206,7 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
   const letters: number[] = [];
   const references = new Map<unknown, ReplacerRef>();
   const indent = space;
+  const twoIndent = indent + indent;
 
   function getIdentifier() {
     const { length } = letters;
@@ -243,199 +237,7 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
     return false;
   }
 
-  function mapObject(ref: ReplacerRef, nextSpace: string, body?: boolean) {
-    return (ref.elements as [string, ReplacerRef][]).filter(_ => ! _[1].exclude).map(_ => `${JSON.stringify(_[0])}:${separator}${_[1].stringify(nextSpace, body)}`);
-  }
-
-  function create(type: typeof Array | typeof Map | typeof Object | typeof Set) {
-    let argument = argumentDefault;
-    let map: (ref: ReplacerRef, space: string, body?: boolean) => string[] = mapDefault;
-    let parameter: (ref: ReplacerRef, stringify: (elements: string[]) => string, nextSpace: string) => string;
-    let empty: string;
-    let prefix: string;
-    let suffix: string;
-
-    switch(type) {
-    case Array:
-      parameter = (ref: ReplacerRef, stringify, nextSpace) => {
-        const { elements } = ref as { elements: ReplacerRef[] };
-        const args = elements.map(_ => _.argument());
-        const last = args.reduce((last, _, i) => (_ ? i : last), -1);
-
-        return stringify(
-          (ref.elements as ReplacerRef[])
-            .map((_, i) => {
-              if(args[i]) return _.stringify(nextSpace);
-
-              const statement = `${indent}${ref.identifier}[${i}]${separator}=${separator}${elements[i].stringify(indent, true)}`;
-
-              if(! ref.statements) ref.statements = [statement];
-              else ref.statements.push(statement);
-
-              return "0";
-            })
-            .filter((_, i) => i <= last)
-        );
-      };
-
-      empty = "[]";
-      prefix = "[";
-      suffix = "]";
-      break;
-
-    case Map:
-      parameter = (ref, stringify, nextSpace) => {
-        const { elements } = ref as { elements: ReplacerRef[] };
-        const last = elements.findIndex(_ => ! _.argument());
-
-        if(last !== -1) {
-          ref.statements = [];
-
-          for(let i = last; i < elements.length; ++i) {
-            const stringified = elements[i].stringify(indent, true);
-
-            ref.statements.push(`${indent}${ref.identifier}.set(${stringified.substring(1, stringified.length - 1)})`);
-          }
-        }
-
-        return stringify((last === -1 ? elements : elements.filter((_, i) => i < last)).map(_ => _.stringify(nextSpace)));
-      };
-
-      empty = "new Map()";
-      prefix = "new Map([";
-      suffix = "])";
-      break;
-
-    case Object:
-      parameter = (ref, stringify, nextSpace) => {
-        const { elements } = ref as { elements: [string, ReplacerRef][] };
-
-        return stringify(
-          elements
-            .filter(([key, value]) => {
-              if(value.argument()) return true;
-
-              const statement = `${indent}${ref.identifier}[${JSON.stringify(key)}]${separator}=${separator}${value.stringify(indent, true)}`;
-
-              if(! ref.statements) ref.statements = [statement];
-              else ref.statements.push(statement);
-
-              return false;
-            })
-            .map(_ => `${JSON.stringify(_[0])}:${separator}${_[1].stringify(nextSpace)}`)
-        );
-      };
-
-      argument = argumentObject;
-      map = mapObject;
-      empty = "{}";
-      prefix = "{";
-      suffix = "}";
-      break;
-
-    case Set:
-      parameter = (ref, stringify, nextSpace) => {
-        const { elements } = ref as { elements: ReplacerRef[] };
-        const last = elements.findIndex(_ => ! _.argument());
-
-        if(last !== -1) {
-          ref.statements = [];
-
-          for(let i = last; i < elements.length; ++i) ref.statements.push(`${indent}${ref.identifier}.add(${elements[i].stringify(indent, true)})`);
-        }
-
-        return stringify((last === -1 ? elements : elements.filter((_, i) => i < last)).map(_ => _.stringify(nextSpace)));
-      };
-
-      empty = "new Set()";
-      prefix = "new Set([";
-      suffix = "])";
-    }
-
-    function stringify(this: ReplacerRef, currSpace: string, body?: boolean, first?: boolean) {
-      if(this.identifier && (body || ! first)) return this.identifier;
-
-      const nextSpace = currSpace + indent;
-
-      function stringify(elements: string[]) {
-        return elements.length ? `${prefix}${newLine}${elements.map(_ => nextSpace + _).join("," + newLine)}${newLine}${currSpace}${suffix}` : empty;
-      }
-
-      return first ? parameter(this, stringify, nextSpace) : stringify(map(this, nextSpace, body));
-    }
-
-    return { argument, isReference: true, stringify };
-  }
-
   function replace(context: unknown, key: number | string, value: unknown, skip?: boolean, skipNext?: boolean): ReplacerRef {
-    function createRef(value: unknown): ReplacerRef {
-      switch(typeof value) {
-      case "function":
-      case "symbol":
-        return excludeRef();
-      case "string":
-        return nativeRef(JSON.stringify(value));
-      }
-
-      if(value instanceof Array) return { elements: value.map((_, i) => replace(value, numberKey ? i : i.toString(), _, skipNext)), ...create(Array) };
-
-      if(value instanceof Date) return nativeRef(isNaN(value.getTime()) ? "new Date(NaN)" : `new Date(${stringifyDate(value)})`);
-
-      if(value instanceof Error) {
-        const id = errors.findIndex(_ => value instanceof _);
-        const { name } = id === -1 ? Error : errors[id];
-        const message = replace(value, "message", value.message);
-
-        function argument(this: ReplacerRef) {
-          return ! this.identifier;
-        }
-
-        function stringify(this: ReplacerRef, space: string, body?: boolean) {
-          return this.identifier && body ? this.identifier : `new ${name}(${message.stringify(space + indent)})`;
-        }
-
-        return { argument, isReference: true, stringify };
-      }
-
-      if(value instanceof Map) {
-        return {
-          elements: Array.from(value)
-            .map((_, i) => replace(value, i, _, false, true))
-            .filter(_ => ! _.exclude),
-          ...create(Map)
-        };
-      }
-
-      if(value instanceof RegExp) {
-        const [, exp, flags] = value.toString().match("/(.*)/(.*)")!;
-
-        return nativeRef(`new RegExp(${JSON.stringify(exp)}${flags ? `,"${flags}"` : ""})`);
-      }
-
-      if(value instanceof Set) return { elements: Array.from(value).map((_, i) => replace(value, i, _)), ...create(Set) };
-
-      if(value instanceof URL) return nativeRef(`new URL(${JSON.stringify(value.toString())})`);
-
-      const id = typedArrays.findIndex(_ => value instanceof _);
-
-      if(id !== -1) {
-        const { name } = typedArrays[id];
-        const bigint = value instanceof BigInt64Array || value instanceof BigUint64Array;
-        const values = Array.from((value as Int8Array).values() as IterableIterator<unknown>)
-          .map(_ => `${_}`)
-          .join(bigint ? "n," : ",");
-
-        return nativeRef(values.length ? `new ${name}([${values}${bigint ? "n" : ""}])` : `new ${name}()`);
-      }
-
-      return {
-        elements: Object.entries(value as object)
-          .map(_ => [_[0], replace(value, ..._)])
-          .filter(_ => _[1]),
-        ...create(Object)
-      };
-    }
-
     if(replacer && ! skip) value = replacer.call(context, key, value);
     if(skipNext && (! (value instanceof Array) || value.length !== 2)) return { exclude: true } as ReplacerRef;
 
@@ -443,8 +245,278 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
       let ref = references.get(value);
 
       if(! ref) {
+        let rest: ReplacerRef;
+
         references.set(value, (ref = {} as ReplacerRef));
-        Object.assign(ref, createRef(value));
+
+        switch(typeof value) {
+        case "function":
+        case "symbol":
+          rest = excludeRef();
+          break;
+
+        case "string":
+          rest = nativeRef(JSON.stringify(value));
+          break;
+
+        default:
+          if(value instanceof Array) {
+            const elements: ReplacerRef[] = [];
+            let elems = elements;
+
+            for(const [i, _] of value.entries()) elements.push(replace(value, numberKey ? i : i.toString(), _, skipNext));
+
+            function stringify(this: ReplacerRef, currIndent: string, body?: boolean, first?: boolean) {
+              if(this.identifier && body) return this.identifier;
+
+              if(first) {
+                const push = elements.findIndex(_ => ! _.argument());
+
+                if(push !== -1) {
+                  elems = elements.slice(0, push);
+                  const args = elements.slice(push, elements.length);
+
+                  this.statement = function(this: ReplacerRef) {
+                    return `${indent}${this.identifier}.push(${newLine}${args.map(_ => twoIndent + _.stringify(twoIndent, true)).join("," + newLine)}${newLine}${indent})`;
+                  };
+                }
+              }
+
+              const nextIndent = currIndent + indent;
+
+              return elems.length ? `[${newLine}${elems.map(_ => nextIndent + _.stringify(nextIndent, body)).join("," + newLine)}${newLine}${currIndent}]` : "[]";
+            }
+
+            rest = { argument, elements, stringify };
+            break;
+          }
+
+          if(value instanceof Date) {
+            rest = nativeRef(isNaN(value.getTime()) ? "new Date(NaN)" : `new Date(${stringifyDate(value)})`);
+            break;
+          }
+
+          if(value instanceof Map) {
+            const elements: ReplacerRef[] = [];
+            let args: ReplacerRef[] = [];
+            let elems = elements;
+
+            for(const [i, _] of Array.from(value).entries()) {
+              const replaced = replace(value, i, _, false, true);
+
+              if(! replaced.exclude) elements.push(replaced);
+            }
+
+            function stringify(this: ReplacerRef, currIndent: string, body?: boolean, first?: boolean) {
+              if(this.already && this.identifier && body) return this.identifier;
+
+              if(first) {
+                const set = elements.findIndex(_ => ! _.argument());
+
+                if(set !== -1) {
+                  elems = elements.slice(0, set);
+                  args = elements.slice(set, elements.length);
+                }
+              }
+
+              const nextIndent = currIndent + indent;
+
+              if(! this.already && this.identifier && body) {
+                this.already = true;
+
+                return args.length
+                  ? `${this.identifier}${newLine}${args
+                    .map(_ => {
+                      const stringified = _.stringify(nextIndent, true);
+
+                      return `${nextIndent}.set(${stringified.substring(1, stringified.length - 1)})`;
+                    })
+                    .join(newLine)}`
+                  : this.identifier;
+              }
+
+              return elems.length ? `new Map([${newLine}${elems.map(_ => nextIndent + _.stringify(nextIndent, body)).join("," + newLine)}${newLine}${currIndent}])` : "new Map()";
+            }
+
+            rest = { argument, elements, stringify };
+            break;
+          }
+
+          if(value instanceof RegExp) {
+            const [, exp, flags] = value.toString().match("/(.*)/(.*)")!;
+
+            rest = nativeRef(`new RegExp(${JSON.stringify(exp)}${flags ? `,"${flags}"` : ""})`);
+            break;
+          }
+
+          if(value instanceof Set) {
+            const elements: ReplacerRef[] = [];
+            let args: ReplacerRef[] = [];
+            let elems = elements;
+
+            for(const [i, _] of Array.from(value).entries()) elements.push(replace(value, i, _));
+
+            function stringify(this: ReplacerRef, currIndent: string, body?: boolean, first?: boolean) {
+              if(this.already && this.identifier && body) return this.identifier;
+
+              if(first) {
+                const add = elements.findIndex(_ => ! _.argument());
+
+                if(add !== -1) {
+                  elems = elements.slice(0, add);
+                  args = elements.slice(add, elements.length);
+                }
+              }
+
+              const nextIndent = currIndent + indent;
+
+              if(! this.already && this.identifier && body) {
+                this.already = true;
+
+                return args.length ? `${this.identifier}${newLine}${args.map(_ => `${nextIndent}.add(${_.stringify(nextIndent, true)})`).join(newLine)}` : this.identifier;
+              }
+
+              return elems.length ? `new Set([${newLine}${elems.map(_ => nextIndent + _.stringify(nextIndent, body)).join("," + newLine)}${newLine}${currIndent}])` : "new Set()";
+            }
+
+            rest = { argument, elements, stringify };
+            break;
+          }
+
+          if(value instanceof URL) {
+            rest = nativeRef(`new URL(${JSON.stringify(value.toString())})`);
+            break;
+          }
+
+          const id = typedArrays.findIndex(_ => value instanceof _);
+
+          if(id !== -1) {
+            const {
+              name,
+              prototype: { toString }
+            } = typedArrays[id];
+            const bigint = value instanceof BigInt64Array || value instanceof BigUint64Array;
+            const stringified = toString.call(value);
+
+            rest = nativeRef(stringified.length ? `new ${name}([${bigint ? stringified.replace(/,/g, "n,") + "n" : stringified}])` : `new ${name}()`);
+          } else {
+            const args: [string, ReplacerRef][] = [];
+            const elements: [string, ReplacerRef][] = [];
+            let elems = elements;
+
+            const entries = Object.entries(value as object);
+
+            if(sortKeys) entries.sort((a, b) => (a[0] < b[0] ? -1 : 1));
+
+            function argument(this: ReplacerRef): boolean {
+              if(this.identifier) return false;
+              if((this.elements as [string, ReplacerRef][]).some(_ => ! _[1].argument())) return false;
+
+              return true;
+            }
+
+            if(value instanceof Error) {
+              const id = errors.findIndex(_ => value instanceof _);
+              const error = id === -1 ? Error : errors[id];
+              const cause = value.cause ? replace(value, "cause", value.cause) : undefined;
+              const message = replace(value, "message", value.message);
+              const name = value.name !== error.name ? replace(value, "name", value.name) : undefined;
+              const stack = omitStack ? undefined : replace(value, "stack", value.stack);
+              let anyway = false;
+
+              if(cause && ! cause.exclude) elements.push(["cause", cause]);
+              if(name && ! name.exclude) elements.push(["name", name]);
+              if(stack && ! stack.exclude) elements.push(["stack", stack]);
+
+              for(const [key, val] of entries) {
+                if(["cause", "message", "name", "stack"].indexOf(key) === -1) {
+                  const replaced = replace(value, key, val);
+
+                  if(! replaced.exclude) elements.push([key, replaced]);
+                }
+              }
+
+              function stringify(this: ReplacerRef, currIndent: string, body?: boolean, first?: boolean) {
+                if(this.already && this.identifier && body) return this.identifier;
+
+                if(first) {
+                  const notArgument = message && ! message.argument();
+
+                  anyway = elements.findIndex(_ => ! _[1].argument()) !== -1 || notArgument;
+
+                  if(anyway && notArgument) {
+                    const cause = elements.length && elements[0][0] === "cause" ? elements.shift() : undefined;
+
+                    elements.unshift(["message", message]);
+
+                    if(cause) elements.unshift(cause);
+                  }
+                }
+
+                const nextIndent = currIndent + indent;
+                const nextNextIndent = nextIndent + indent;
+
+                const construct = (indent: string) => `new ${error.name}(${! message || message.exclude || (first && ! message.argument()) ? '""' : message.stringify(indent, body)})`;
+
+                const assign = () =>
+                  `Object.assign(${newLine}${nextIndent}${this.identifier && body ? this.identifier : construct(nextNextIndent)},${newLine}${nextIndent}{${newLine}${elements
+                    .map(_ => `${nextNextIndent}${JSON.stringify(_[0])}:${separator}${_[1].stringify(nextNextIndent, body)}`)
+                    .join("," + newLine)}${newLine}${nextIndent}}${newLine}${currIndent})`;
+
+                if(! this.already && this.identifier && body) {
+                  this.already = true;
+
+                  return anyway ? assign() : this.identifier;
+                }
+
+                return elements.length === 0 || anyway ? construct(nextIndent) : assign();
+              }
+
+              rest = { argument, elements, stringify };
+              break;
+            }
+
+            for(const [key, val] of entries) {
+              const replaced = replace(value, key, val);
+
+              if(! replaced.exclude) elements.push([key, replaced]);
+            }
+
+            function stringify(this: ReplacerRef, currIndent: string, body?: boolean, first?: boolean) {
+              if(this.already && this.identifier && body) return this.identifier;
+
+              if(first) {
+                elems = [];
+
+                for(const _ of elements) (_[1].argument() ? elems : args).push(_);
+              }
+
+              const nextIndent = currIndent + indent;
+
+              if(! this.already && this.identifier && body) {
+                this.already = true;
+
+                if(args.length) {
+                  const nextNextIndent = nextIndent + indent;
+
+                  return `Object.assign(${newLine}${nextIndent}${this.identifier},${newLine}${nextIndent}{${newLine}${args
+                    .map(_ => `${nextNextIndent}${JSON.stringify(_[0])}:${separator}${_[1].stringify(nextNextIndent, true)}`)
+                    .join("," + newLine)}${newLine}${nextIndent}}${newLine}${currIndent})`;
+                }
+
+                return this.identifier;
+              }
+
+              return elems.length
+                ? `{${newLine}${elems.map(_ => `${nextIndent}${JSON.stringify(_[0])}:${separator}${_[1].stringify(nextIndent, body)}`).join("," + newLine)}${newLine}${currIndent}}`
+                : "{}";
+            }
+
+            rest = { argument, elements, stringify };
+          }
+        }
+
+        Object.assign(ref, rest);
       }
 
       if(ref.found) {
@@ -482,7 +554,7 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
   if(! identifiers.length) return replaced.stringify("");
 
   const args = identifiers.map(_ => _.stringify(indent, false, true));
-  const statements = identifiers.reduce<string[]>((statements, _) => (_.statements ? [...statements, ..._.statements] : statements), []);
+  const statements = identifiers.filter(_ => _.statement).map(_ => _.statement!());
 
   statements.push(`${indent}return ${replaced.stringify(indent, true)}`);
 

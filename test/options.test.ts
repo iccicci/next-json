@@ -102,6 +102,21 @@ describe("options", () => {
       expect.assertions(3);
     });
 
+    it("sortKeys", () => {
+      const obj: Record<string, number> = { b: 23, c: 0 };
+
+      obj.a = 42;
+      expect(NJSON.stringify(obj)).toBe('{"b":23,"c":0,"a":42}');
+      expect(NJSON.stringify(obj, { sortKeys: true })).toBe('{"a":42,"b":23,"c":0}');
+
+      const obj2 = { test: Infinity };
+      const set = new Set<unknown>([obj2]);
+      const arr: unknown[] = [NaN, obj2, set];
+      set.add(arr);
+      arr.push(arr);
+      expect(NJSON.stringify(arr)).toBe('((A,B)=>{B.push(A,new Set([A,B]),B);return B})({"test":Infinity},[NaN])');
+    });
+
     it("function replacer", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const replacer = function(this: any, key: number | string, value: unknown) {

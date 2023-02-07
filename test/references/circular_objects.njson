@@ -1,9 +1,13 @@
 ((A) => {
-  A["object2"] = {
-    "object1": A,
-    "test": "njson"
-  };
-  return A
+  return Object.assign(
+    A,
+    {
+      "object2": {
+        "object1": A,
+        "test": "njson"
+      }
+    }
+  )
 })(
   {
     "njson": "test"

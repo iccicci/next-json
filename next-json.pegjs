@@ -1,24 +1,5 @@
 // NJSON Next-JSON Grammar
-// ============
-//
 // Based on https://github.com/peggyjs/peggy/blob/main/examples/json.pegjs
-
-// JSON Grammar
-// ============
-//
-// Based on the grammar from RFC 7159 [1].
-//
-// Note that JSON is also specified in ECMA-262 [2], ECMA-404 [3], and on the
-// JSON website [4] (somewhat informally). The RFC seems the most authoritative
-// source, which is confirmed e.g. by [5].
-//
-// [1] http://tools.ietf.org/html/rfc7159
-// [2] http://www.ecma-international.org/publications/standards/Ecma-262.htm
-// [3] http://www.ecma-international.org/publications/standards/Ecma-404.htm
-// [4] http://json.org/
-// [5] https://www.tbray.org/ongoing/When/201x/2014/03/05/RFC7159-JSON
-
-// ----- 2. NJSON Grammar -----
 
 NJSON = wss @(value / function)
 
@@ -27,7 +8,6 @@ wss "white spaces" = ws*
 colon              = ":" wss
 comma              = "," wss
 dot                = "." wss
-equal              = "=" wss
 semicolon          = ";" wss
 open_round         = "(" wss
 closed_round       = ")" wss
@@ -36,33 +16,17 @@ closed_square      = "]" wss
 open_brace         = "{" wss
 closed_brace       = "}" wss
 
-// ----- 3. Values -----
-
-value =
-  (@(array / constructor / false / null / number / object / string / true / undefined) wss) /
-  identifier:identifier
-  {
-    if(! options!.body) throw peg$buildSimpleError("Unexpected identifier in this context.", location());
-
-    return options!.running ? options!.vars[identifier] : identifier;
-  }
+value = @(array / chain / constructor / false / null / number / object / object_assign / string / true / undefined) wss
 
 false     = "false"     { return false;     }
 null      = "null"      { return null;      }
 true      = "true"      { return true;      }
 undefined = "undefined" { return undefined; }
 
-// ----- 4. Objects -----
-
-object = open_brace entries:(head:entry tail:(comma @entry)* { return Object.fromEntries([head, ...tail]); })? closed_brace { return entries !== null ? entries : {}; }
+object = open_brace entries:(head:entry tail:(comma @entry)* comma? { return Object.fromEntries([head, ...tail]); })? closed_brace { return entries !== null ? entries : {}; }
 entry  = name:string colon value:value { return [name, value]; }
 
-// ----- 5. Arrays -----
-
-array = open_square values:(head:value tail:(comma @value)* { return [head, ...tail]; })? closed_square { return values !== null ? values : []; }
-
-// ----- 6. Numbers -----
-// See RFC 4234, Appendix B (http://tools.ietf.org/html/rfc4234).
+array = open_square values:(head:value tail:(comma @value)* comma? { return [head, ...tail]; })? closed_square { return values !== null ? values : []; }
 
 number "number" = ("NaN" { return NaN; } / "-"? ("Infinity" / integer ("n" / frac? exp?))) wss
   {
@@ -79,8 +43,6 @@ exp     = [eE] ("-" / "+")? decimal+
 frac    = "." decimal+
 integer = "0" / ([1-9] decimal*)
 decimal = [0-9]
-
-// ----- 7. Strings -----
 
 string "string" = '"' chars:char* escaped_new_line '"' wss { return chars.join(""); }
 
@@ -103,11 +65,7 @@ hexadecimal = digit:.
     throw peg$buildSimpleError("Invalid Unicode escape sequence.", location());
   }
 
-// ----- 8. Natives -----
-
 constructor = "new" ws wss @(date / error / int8array / map / regexp / set / uint8array / uint8clampedarray / url)
-
-// ----- 9. Dates -----
 
 date = "Date" wss open_round time:(value:(number / string) { return { location: location(), value }; }) closed_round
   {
@@ -121,8 +79,6 @@ date = "Date" wss open_round time:(value:(number / string) { return { location: 
 
     return date;
   }
-
-// ----- 10. RegExps -----
 
 regexp =
   "RegExp" wss open_round
@@ -139,8 +95,6 @@ regexp =
     }
   }
 
-// ----- 10. URLs -----
-
 url = "URL" wss open_round url:(value:string { return { location: location(), value }; }) closed_round
   {
     try {
@@ -152,18 +106,12 @@ url = "URL" wss open_round url:(value:string { return { location: location(), va
     }
   }
 
-// ----- 11. Sets -----
-
 set = "Set" wss open_round elements:array? closed_round { return elements ? new Set(elements) : new Set(); }
-
-// ----- 12. Maps -----
 
 map = "Map" wss open_round elements:array_map_entry? closed_round { return elements ? new Map(elements) : new Map(); }
 
 map_entry       = open_square key:value comma value:value closed_square { return [key, value]; }
 array_map_entry = open_square values:(head:map_entry tail:(comma @map_entry)* { return [head, ...tail]; })? closed_square { return values !== null ? values : []; }
-
-// ----- 13. TypedArrays -----
 
 int8array         = "Int8Array"         wss open_round elements:array_small_number? closed_round { return elements ? new Int8Array(elements)         : new Int8Array();         }
 uint8array        = "Uint8Array"        wss open_round elements:array_small_number? closed_round { return elements ? new Uint8Array(elements)        : new Uint8Array();        }
@@ -178,32 +126,27 @@ small_number = value:number
     return value;
   }
 
-// ----- 14. Errors -----
+object_assign = "Object" wss dot "assign" wss open_round dest:value comma source:value closed_round
+  {
+    if(Object.assign(dest, source) instanceof Error && (source.message || source.name) && ! source.stack) {
+      dest.stack = `${dest.name}: ${dest.message}\n    from NJSON`;
+    }
+
+    return dest;
+  }
 
 error =
   err:("Error" / "EvalError" / "RangeError" / "ReferenceError" / "SyntaxError" / "TypeError" / "URIError") wss
-  open_round message:string closed_round
+  open_round message:value closed_round
   {
     const constructor = errors[err as Errors];
     const props = { configurable: true, value: undefined, writable: true };
     const val = new constructor(message);
 
-    return Object.defineProperties(val, { "cause": props, "stack": props });
+    return Object.defineProperties(val, { "cause": props, "stack": {...props,value:`${err}: ${message}\n    from NJSON`} });
   }
-  /* Valid from Node.js v16: need to be refactored
-  open_round message:string cause:(comma open_brace '"cause"' wss colon @value closed_brace)? closed_round
-  {
-    const constructor = errors[err as Errors];
-    const val = cause ? new constructor(message, { cause }) : new constructor(message);
 
-    return Object.defineProperty(val, "stack", { configurable: true, value: undefined, writable: true });
-  }
-  */
-
-// ----- 15. Repeated references -----
-
-function =
-  open_round parameters "=>" wss body closed_round arguments
+function = open_round parameters "=>" wss body closed_round arguments
   {
     Object.assign(options!, { body: true, running: true, startRule: "statement" });
 
@@ -216,21 +159,16 @@ function =
     }
   }
 
-identifier =
-  identifier:($[A-Z]+) wss
+identifier = identifier:($[A-Z]+) ! [a-z] wss
   {
     const { offset, running, vars } = options!;
 
-    if(! running) return identifier;
-    if(! (identifier in vars)) throw peg$buildSimpleError(`Undeclared variable ${identifier}.`, addLocations(offset, location()));
+    if(running && ! (identifier in vars)) throw peg$buildSimpleError(`Undeclared variable ${identifier}.`, addLocations(offset, location()));
 
     return identifier;
   }
 
-parameters =
-  open_round
-  params:(head:identifier tail:(comma @identifier)* { return [head, ...tail]; })
-  closed_round
+parameters = open_round params:(head:identifier tail:(comma @identifier)* { return [head, ...tail]; }) closed_round
   {
     const vars: any = {};
 
@@ -240,95 +178,53 @@ parameters =
     return null;
   }
 
-body =
-  open_brace
-  statements:(head:statement tail:(semicolon @statement)* { return [head, ...tail]; })
-  closed_brace
-  {
-    Object.assign(options!, { body: false, statements });
-  }
+body = open_brace statements:(head:statement tail:(semicolon @statement)* { return [head, ...tail]; }) closed_brace { Object.assign(options!, { body: false, statements }); }
 
-statement = assignment / method / return
-
-assignment =
-  identifier:identifier
-  open_square
-  index:(index:(int:integer { return [int, false]; } / str:string { return [str, true]; }) { return [...index, location()]; })
-  closed_square
-  equal
-  value:value
-  {
-    const { offset, running, types, vars } = options!;
-
-    if(! running) return [text(), location()];
-
-    const type = types[identifier];
-    let [idx, str, where] = index;
-
-    if(type === "Array") {
-      if(str) throw peg$buildSimpleError(`Expected integer but ${JSON.stringify(idx)} found.`, addLocations(offset, where));
-
-      idx = parseInt(idx, 10);
-    } else if(type === "Error" || type === "Object") {
-      if(! str) throw peg$buildSimpleError(`Expected string but "${idx}" found.`, addLocations(offset, where));
-    } else throw peg$buildSimpleError(`Can't assign property to ${type}.`, addLocations(offset, location()));
-
-    vars[identifier][idx] = value;
-  }
+statement = chain / return
 
 method =
-  identifier:identifier
   dot
-  method:(
-    (
-      "add" wss
-      open_round
-      value:value
-      {
-        return { name: "add", value };
-      }
-    ) /
-    (
-      "set" wss
-      open_round
-      key:value
-      comma
-      value:value
-      {
-        return { key, name: "set", value };
-      }
-    )
+  @(
+    ( method:("add"  { return { location: location(), name: "add"  }; }) wss open_round value:value { return { ...method, value }; } ) /
+    ( method:("push" { return { location: location(), name: "push" }; }) wss open_round args:(head:value tail:(comma @value)* comma? { return [head, ...tail]; }) { return { ...method, args }; } ) /
+    ( method:("set"  { return { location: location(), name: "set"  }; }) wss open_round key:value comma value:value { return { ...method, key, value }; } )
   )
   closed_round
-  {
-    const { offset, running, types, vars } = options!;
 
+chain = identifier:identifier methods:(@method)*
+  {
+    const { body, offset, running, types, vars } = options!;
+    let first = true;
+
+    if(! body) throw peg$buildSimpleError("Unexpected identifier in this context.", location());
     if(! running) return [text(), location()];
 
-    const { key, name, value } = method;
-    const type = types[identifier];
+    for(const method of methods) {
+      const { args, key, location, name, value } = method;
+      const type = types[identifier];
 
-    if(name === "add") {
-      if(type !== "Set") throw peg$buildSimpleError(`Can't call method "add" on ${type}.`, addLocations(offset, location()));
+      if(name === "add") {
+        if(type !== "Set") throw peg$buildSimpleError(`Can't call method "add" on ${first ? type : "Number"}.`, addLocations(offset, location));
 
-      vars[identifier].add(value);
-    } else {
-      if(type !== "Map") throw peg$buildSimpleError(`Can't call method "set" on ${type}.`, addLocations(offset, location()));
+        vars[identifier].add(value);
+      } else if(name === "set") {
+        if(type !== "Map") throw peg$buildSimpleError(`Can't call method "set" on ${first ? type : "Number"}.`, addLocations(offset, location));
 
-      vars[identifier].set(key, value);
+        vars[identifier].set(key, value);
+      } else {
+        if(type !== "Array" || ! first) throw peg$buildSimpleError(`Can't call method "push" on ${first ? type : "Number"}.`, addLocations(offset, location));
+
+        first = false;
+        vars[identifier].push(...args);
+      }
     }
+
+    return first ? vars[identifier] : vars[identifier].length;
   }
 
-return =
-  "return" wss value:value
-  {
-    return options!.running ? [value] : [text(), location()];
-  }
+return = "return" ws wss value:value { return options!.running ? [value] : [text(), location()]; }
 
-arguments =
-  open_round
-  args:(head:value tail:(comma @value)* { return [head, ...tail]; })
-  closed_round
+arguments = open_round args:(head:value tail:(comma @value)* { return [head, ...tail]; }) closed_round
   {
     const { params, types, vars } = options!;
 

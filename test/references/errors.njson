@@ -1,11 +1,24 @@
-((A) => {
+((A, B) => {
   return [
     null,
     null,
-    new RangeError("original error"),
     A,
-    A
+    Object.assign(
+      B,
+      {
+        "cause": A,
+        "name": "TestError",
+        "stack": "EvalError: thrown error\n    thrown stack"
+      }
+    ),
+    B
   ]
 })(
+  Object.assign(
+    new RangeError("original error"),
+    {
+      "stack": "RangeError: original error\n    original stack"
+    }
+  ),
   new EvalError("thrown error")
 )
