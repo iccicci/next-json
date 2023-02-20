@@ -27,7 +27,7 @@
     "node": ">=14.0"
   },
   "funding": {
-    "url": "https://blockchain.info/address/1Md9WFAHrXTb3yPBwQWmUfv2RmzrtbHioB"
+    "url": "https://github.com/iccicci/next-json#donating"
   },
   "homepage": "https://github.com/iccicci/next-json#readme",
   "keywords": [
@@ -71,5 +71,5 @@
   },
   "sideEffects": false,
   "types": "./dist/types/index.d.ts",
-  "version": "0.2.0"
+  "version": "0.2.1"
 }

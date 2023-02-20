@@ -3,24 +3,30 @@
 Next JSON format
 
 [![Build Status][travis-badge]][travis-url]
-[![Code Climate][code-badge]][code-url]
-[![Test Coverage][cover-badge]][code-url]
-
 [![NPM version][npm-badge]][npm-url]
-[![NPM downloads][npm-downloads-badge]][npm-url]
-[![Stars][stars-badge]][stars-url]
-
 [![Types][types-badge]][npm-url]
 [![Dependents][deps-badge]][deps-url]
-[![Donate][donate-badge]][donate-url]
+
+[![Code Climate][code-badge]][code-url]
+[![Test Coverage][cover-badge]][code-url]
+[![NPM downloads][npm-downloads-badge]][npm-url]
+
+[![Stars][stars-badge]][stars-url]
+[![Donate][donate-badge-ada]][donate-url-ada]
+[![Donate][donate-badge-btc]][donate-url-btc]
+[![Donate][donate-badge-eth]][donate-url-eth]
 
 [code-badge]: https://codeclimate.com/github/iccicci/next-json/badges/gpa.svg
 [code-url]: https://codeclimate.com/github/iccicci/next-json
 [cover-badge]: https://codeclimate.com/github/iccicci/next-json/badges/coverage.svg
 [deps-badge]: https://badgen.net/npm/dependents/next-json?icon=npm&cache=300
 [deps-url]: https://www.npmjs.com/package/next-json?activeTab=dependents
-[donate-badge]: https://badgen.net/badge/donate/bitcoin?icon=bitcoin&cache=300
-[donate-url]: https://blockchain.info/address/1Md9WFAHrXTb3yPBwQWmUfv2RmzrtbHioB
+[donate-badge-ada]: https://badgen.net/badge/donate/cardano?icon=https://raw.githubusercontent.com/iccicci/next-json/master/cardano.svg&cache=300
+[donate-badge-btc]: https://badgen.net/badge/donate/bitcoin?icon=bitcoin&cache=300
+[donate-badge-eth]: https://badgen.net/badge/donate/ethereum?icon=https://cryptologos.cc/logos/ethereum-eth-logo.svg&cache=300
+[donate-url-ada]: https://cardanoscan.io/address/DdzFFzCqrhsxfKAujiyG5cv3Bz7wt5uahr9k3hEa8M6LSYQMu9bqc25mG72CBZS3vJEWtWj9PKDUVtfBFcq5hAtDYsZxfG55sCcBeHM9
+[donate-url-btc]: https://www.blockchain.com/explorer/addresses/btc/3BqXRqgCU2CWEoZUgrjU3b6VTR26Hee5gq
+[donate-url-eth]: https://www.blockchain.com/explorer/addresses/eth/0x8039fD67b895fAA1F3e0cF539b8F0290EDe1C042
 [github-url]: https://github.com/iccicci/next-json
 [npm-downloads-badge]: https://badgen.net/npm/dw/next-json?icon=npm&cache=300
 [npm-badge]: https://badgen.net/npm/v/next-json?color=green&icon=npm&cache=300
@@ -378,8 +384,13 @@ Do not hesitate to report any bug or inconsistency [@github](https://github.com/
 
 # Donating
 
-If you find useful this package, please consider the opportunity to donate some satoshis to this bitcoin address:
-**1Md9WFAHrXTb3yPBwQWmUfv2RmzrtbHioB**
+If you find useful this package, please consider the opportunity to donate on one of following cryptos:
+
+ADA: **DdzFFzCqrhsxfKAujiyG5cv3Bz7wt5uahr9k3hEa8M6LSYQMu9bqc25mG72CBZS3vJEWtWj9PKDUVtfBFcq5hAtDYsZxfG55sCcBeHM9**
+
+BTC: **3BqXRqgCU2CWEoZUgrjU3b6VTR26Hee5gq**
+
+ETH: **0x8039fD67b895fAA1F3e0cF539b8F0290EDe1C042**
 
 # See also
 
