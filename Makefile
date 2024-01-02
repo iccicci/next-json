@@ -6,7 +6,7 @@ build: parser.ts
 	tsc -p tsconfig.types.json
 
 deploy: build
-	npm_config_registry=registry.npmjs.org npm publish
+	npm_config_registry="https://registry.npmjs.org/" npm publish
 
 parser.ts: generate.ts next-json.pegjs
 	ts-node generate.ts
