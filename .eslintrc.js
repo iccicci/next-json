@@ -23,7 +23,8 @@ const rules = {
   semi:                                         ["error", "always"],
   "simple-import-sort/exports":                 "error",
   "simple-import-sort/imports":                 "error",
-  "sort-keys-fix/sort-keys-fix":                "warn",
+  "sort-keys":                                  "off",
+  "sort-keys/sort-keys-fix":                    "error",
   "space-before-function-paren":                ["error", { anonymous: "never", asyncArrow: "always", named: "never" }],
   "space-unary-ops":                            ["error", { nonwords: false, overrides: { "!": true }, words: true }]
 };
@@ -33,7 +34,7 @@ module.exports = {
   extends:       ["plugin:@typescript-eslint/recommended"],
   parser:        "@typescript-eslint/parser",
   parserOptions: { ecmaVersion: 9, sourceType: "module" },
-  plugins:       ["import", "simple-import-sort", "sort-keys-fix"],
+  plugins:       ["import", "simple-import-sort", "sort-keys"],
   root:          true,
   rules
 };

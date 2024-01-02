@@ -19,23 +19,23 @@ Next JSON format
 [code-badge]: https://codeclimate.com/github/iccicci/next-json/badges/gpa.svg
 [code-url]: https://codeclimate.com/github/iccicci/next-json
 [cover-badge]: https://codeclimate.com/github/iccicci/next-json/badges/coverage.svg
-[deps-badge]: https://badgen.net/npm/dependents/next-json?icon=npm&cache=300
+[deps-badge]: https://img.shields.io/librariesio/dependents/npm/next-json?logo=npm
 [deps-url]: https://www.npmjs.com/package/next-json?activeTab=dependents
-[donate-badge-ada]: https://badgen.net/badge/donate/cardano?icon=https://raw.githubusercontent.com/iccicci/next-json/master/cardano.svg&cache=300
-[donate-badge-btc]: https://badgen.net/badge/donate/bitcoin?icon=bitcoin&cache=300
-[donate-badge-eth]: https://badgen.net/badge/donate/ethereum?icon=https://cryptologos.cc/logos/ethereum-eth-logo.svg&cache=300
+[donate-badge-ada]: https://img.shields.io/static/v1?label=donate&message=cardano&color=blue&logo=cardano
+[donate-badge-btc]: https://img.shields.io/static/v1?label=donate&message=bitcoin&color=blue&logo=bitcoin
+[donate-badge-eth]: https://img.shields.io/static/v1?label=donate&message=ethereum&color=blue&logo=ethereum
 [donate-url-ada]: https://cardanoscan.io/address/DdzFFzCqrhsxfKAujiyG5cv3Bz7wt5uahr9k3hEa8M6LSYQMu9bqc25mG72CBZS3vJEWtWj9PKDUVtfBFcq5hAtDYsZxfG55sCcBeHM9
 [donate-url-btc]: https://www.blockchain.com/explorer/addresses/btc/3BqXRqgCU2CWEoZUgrjU3b6VTR26Hee5gq
 [donate-url-eth]: https://www.blockchain.com/explorer/addresses/eth/0x8039fD67b895fAA1F3e0cF539b8F0290EDe1C042
 [github-url]: https://github.com/iccicci/next-json
-[npm-downloads-badge]: https://badgen.net/npm/dw/next-json?icon=npm&cache=300
-[npm-badge]: https://badgen.net/npm/v/next-json?color=green&icon=npm&cache=300
+[npm-downloads-badge]: https://img.shields.io/npm/dw/next-json?logo=npm
+[npm-badge]: https://img.shields.io/npm/v/next-json?color=green&logo=npm
 [npm-url]: https://www.npmjs.com/package/next-json
-[stars-badge]: https://badgen.net/github/stars/iccicci/next-json?icon=github&cache=300
+[stars-badge]: https://img.shields.io/github/stars/iccicci/next-json?logo=github&style=flat&color=green
 [stars-url]: https://github.com/iccicci/next-json/stargazers
-[travis-badge]: https://badgen.net/travis/iccicci/next-json?icon=travis&cache=300
+[travis-badge]: https://img.shields.io/travis/com/iccicci/next-json?logo=travis
 [travis-url]: https://app.travis-ci.com/github/iccicci/next-json
-[types-badge]: https://badgen.net/npm/types/next-json?color=green&icon=typescript&cache=300
+[types-badge]: https://img.shields.io/static/v1?label=types&message=included&color=green&logo=typescript
 
 ## Why this package?
 

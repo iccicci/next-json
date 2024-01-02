@@ -1,3 +1,3 @@
 {
-  "recommendations": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode", "myh.preview-vscode", "ms-vscode.makefile-tools", "rohit-gohri.format-code-action"]
+  "recommendations": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode", "myh.preview-vscode", "ms-vscode.makefile-tools", "rohit-gohri.format-code-action", "streetsidesoftware.code-spell-checker"]
 }

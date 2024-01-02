@@ -1,5 +1,5 @@
 {
-  "cSpell.words": ["daniele", "linebreak", "njson", "nonblock", "nonwords", "parens", "pegjs", "precoverage", "ricci", "rmzrtb", "satoshis", "tspegjs"],
+  "cSpell.words": ["daniele", "elems", "linebreak", "njson", "nonblock", "nonwords", "parens", "pegjs", "precoverage", "ricci", "rmzrtb", "satoshis", "tspegjs"],
   "editor.codeActionsOnSave": ["source.formatDocument", "source.fixAll.eslint"],
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.formatOnSave": true,

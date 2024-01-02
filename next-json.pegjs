@@ -23,10 +23,10 @@ null      = "null"      { return null;      }
 true      = "true"      { return true;      }
 undefined = "undefined" { return undefined; }
 
-object = open_brace entries:(head:entry tail:(comma @entry)* comma? { return Object.fromEntries([head, ...tail]); })? closed_brace { return entries !== null ? entries : {}; }
+object = open_brace entries:(head:entry tail:(comma @entry)* comma? { return Object.fromEntries([head, ...tail]); })? closed_brace { return entries || {}; }
 entry  = name:string colon value:value { return [name, value]; }
 
-array = open_square values:(head:value tail:(comma @value)* comma? { return [head, ...tail]; })? closed_square { return values !== null ? values : []; }
+array = open_square values:(head:value tail:(comma @value)* comma? { return [head, ...tail]; })? closed_square { return values || []; }
 
 number "number" = ("NaN" { return NaN; } / "-"? ("Infinity" / integer ("n" / frac? exp?))) wss
   {
@@ -106,18 +106,18 @@ url = "URL" wss open_round url:(value:string { return { location: location(), va
     }
   }
 
-set = "Set" wss open_round elements:array? closed_round { return elements ? new Set(elements) : new Set(); }
+set = "Set" wss open_round elements:array? closed_round { return new Set(elements || []); }
 
-map = "Map" wss open_round elements:array_map_entry? closed_round { return elements ? new Map(elements) : new Map(); }
+map = "Map" wss open_round elements:array_map_entry? closed_round { return new Map(elements || []); }
 
 map_entry       = open_square key:value comma value:value closed_square { return [key, value]; }
-array_map_entry = open_square values:(head:map_entry tail:(comma @map_entry)* { return [head, ...tail]; })? closed_square { return values !== null ? values : []; }
+array_map_entry = open_square values:(head:map_entry tail:(comma @map_entry)* { return [head, ...tail]; })? closed_square { return values || []; }
 
 int8array         = "Int8Array"         wss open_round elements:array_small_number? closed_round { return elements ? new Int8Array(elements)         : new Int8Array();         }
 uint8array        = "Uint8Array"        wss open_round elements:array_small_number? closed_round { return elements ? new Uint8Array(elements)        : new Uint8Array();        }
 uint8clampedarray = "Uint8ClampedArray" wss open_round elements:array_small_number? closed_round { return elements ? new Uint8ClampedArray(elements) : new Uint8ClampedArray(); }
 
-array_small_number = open_square values:(head:small_number tail:(comma @small_number)* { return [head, ...tail]; })? closed_square { return values !== null ? values : []; }
+array_small_number = open_square values:(head:small_number tail:(comma @small_number)* { return [head, ...tail]; })? closed_square { return values || []; }
 
 small_number = value:number
   {
