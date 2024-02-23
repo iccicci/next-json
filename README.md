@@ -1,6 +1,6 @@
 # NJSON - next-json
 
-Next JSON format
+Next JavaScript Object Notation
 
 [![Build Status][travis-badge]][travis-url]
 [![NPM version][npm-badge]][npm-url]
@@ -95,7 +95,7 @@ code, but only the subset produced by `NJSON.stringify` (otherwise it would have
 ## Not supported by design
 
 **NJSON** do not supports some `Object`s by design; when one of them is encountered during the serialization process
-`NJSON` tries to act as `JSON` does. Nonetheless they take part in the _repeated referrence algorithm_ anyway. Follow
+`NJSON` tries to act as `JSON` does. Nonetheless they take part in the _repeated references algorithm_ anyway. Follow
 the details.
 
 ### ArrayBuffer
@@ -125,14 +125,14 @@ supported, but trying to transfer one of them between different architectures ma
 ## The `Error` exception
 
 `Error`'s are special objects. By specifications the properties `cause`, `message`, `name` and `stack` are not
-enumerable, **NJSON** serializes them as any other property. This, plus the nature of the `stack` property, origantes
+enumerable, **NJSON** serializes them as any other property. This, plus the nature of the `stack` property, originates
 the `Error` exception to the rule that an _NJSON encoded string_ produces exactly the same value if parsed or
 evaluated.
 
 - `cause`:
 
   - through `NJSON.parse` the result is **a not enumerable** property;
-  - throug `eval` the result may be **an enumerable** or **a not enumerable** property depending on the running
+  - through `eval` the result may be **an enumerable** or **a not enumerable** property depending on the running
     JavaScript engine;
 
 - `stack`:
@@ -140,12 +140,12 @@ evaluated.
   - if absent:
 
     - through `NJSON.parse` the result is **a not enumerable** property with value a _pseudo-stack_;
-    - throug `eval` the result is the standard `stack` property for the running JavaScript engine;
+    - through `eval` the result is the standard `stack` property for the running JavaScript engine;
 
   - if present:
 
     - through `NJSON.parse` the result is **a not enumerable** property;
-    - throug `eval` the result may be **an enumerable** or **a not enumerable** property depending on the running
+    - through `eval` the result may be **an enumerable** or **a not enumerable** property depending on the running
       JavaScript engine;
 
 The only option in my mind to avoid this exception is the use of `Object.defineProperties`, but it would increase both
@@ -195,9 +195,45 @@ console.log(NJSON.stringify(arr));
 // ((A,B)=>{B.push(A,new Set([A,B]),B);return B})({"test":Infinity},[NaN])
 ```
 
+# Polyfill
+
+## Server side
+
+```javascript
+import express from "express";
+import { expressNJSON } from "next-json";
+
+const app = express();
+
+app.use(expressNJSON()); // install the polyfill
+app.all("/mirror", (req, res) => res.njson(req.body)); // there is an 'n' more than usual
+app.listen(3000);
+```
+
+## Client side
+
+```javascript
+import { NJSON, fetchNJSON } from "next-json";
+
+fetchNJSON(); // install the polyfill
+
+const payload = { infinity: Infinity };
+payload.circular = payload;
+
+const response = await fetch("http://localhost:3000/mirror", {
+  body: NJSON.stringify(payload), // there is an 'N' more than usual
+  headers: { "Content-Type": "application/njson" }, // there is an 'n' more than usual
+  method: "POST"
+});
+const body = await response.njson({}); // there is an 'n' more than usual
+```
+
+Here `payload` deep equals `payload.circular`, which deep equals `body`, which deep equals `body.circular`, which deep
+equals `req.body` in server side, which deep equals `req.body.circular` in server side! &#127881;
+
 # MIME type
 
-The proposed MIME type for NJSON format is: `application/njson` .
+The MIME type for NJSON format is: `application/njson` .
 
 # API
 
@@ -211,9 +247,11 @@ NJSON.parse(text, { reviver });
 
 ## NJSON.parse(text[, options])
 
-- `text` [&lt;string>](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#String_type) The text to
-  deserialize.
-- `options` [&lt;NjsonParseOptions>](#interface-njsonparseoptions) Deserialization options.
+Converts a Next JavaScript Object Notation (NJSON) string into an object.
+
+- `text`: [&lt;string>](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#String_type) The text
+  to deserialize.
+- `options`: [&lt;NjsonParseOptions>](#interface-njsonparseoptions) Deserialization options.
 - Returns: [&lt;unknown>](https://www.typescriptlang.org/docs/handbook/2/functions.html#unknown) The _value_ result of
   the deserialization of the **NJSON** encoded `text`.
 
@@ -227,8 +265,11 @@ NJSON.stringify(value, { replacer, space });
 
 ## NJSON.stringify(value[, options])
 
-- `value` [&lt;unknown>](https://www.typescriptlang.org/docs/handbook/2/functions.html#unknown) The value to serialize.
-- `options` [&lt;NjsonStringifyOptions>](#interface-njsonstringifyoptions) Serialization options.
+Converts a JavaScript value to a Next JavaScript Object Notation (NJSON) string.
+
+- `value`: [&lt;unknown>](https://www.typescriptlang.org/docs/handbook/2/functions.html#unknown) The value to
+  serialize.
+- `options`: [&lt;NjsonStringifyOptions>](#interface-njsonstringifyoptions) Serialization options.
 - Returns: [&lt;string>](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#String_type) The
   **NJSON** encoded serialized form of `value`.
 
@@ -261,7 +302,7 @@ parameter of `JSON.parse`. See also [replacer / reviver](#replacer--reviver) for
   Alters the type of the `key` argument for `replacer`. **Default:** `false`.
 - [`omitStack`](#njsonstringifyoptionsomitstack):
   [&lt;boolean>](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#Boolean_type)
-  Specifies if to stringify `stack` for `Error`s. **Default:** `flase`.
+  Specifies if to stringify `stack` for `Error`s. **Default:** `false`.
 - [`replacer`](#njsonstringifyoptionsreplacer):
   [&lt;Function>](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function) |
   [&lt;Array>](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array) | `null` Alters
@@ -319,13 +360,68 @@ parameter of `JSON.serialize`.
 
 ### NjsonStringifyOptions.stringLength
 
-If specified, `String`s which `length` is greater or equal to the specified value take part in the _repeated referrence
+If specified, `String`s which `length` is greater or equal to the specified value take part in the _repeated references
 algorithm_.
 
 ### NjsonStringifyOptions.undef
 
 For default `NJSON.stringify` serializes `undefined` values as well. If set to `false`, `undefined` values are
 treated as `JSON.stringify` does.
+
+## expressNJSON([options])
+
+An Express middleware which works as NJSON body parser and installs the
+[`Express.Response.njson`](#expressresponsenjsonbody-options) method.
+
+- `options`: [&lt;NjsonStringifyOptions>](#interface-expressnjsonoptions) NJSON Express middleware options.
+- Returns: [Express middleware](https://expressjs.com/en/guide/using-middleware.html) The NJSON Express middleware.
+
+## interface ExpressNjsonOptions
+
+- [`parse`](#expressnjsonoptionsparse): [&lt;NjsonParseOptions>](#interface-njsonparseoptions) The `options` passed to
+  [`NJSON.parse`](#njsonparsetext-options) by the middleware to parse the request body.
+- [`stringify`](#expressnjsonoptionsstringify): [&lt;NjsonStringifyOptions>](#interface-njsonstringifyoptions) The
+  default `options` passed to [`NJSON.stringify`](#njsonstringifyvalue-options) by
+  [`Express.Response.njson`](#expressresponsenjsonbody-options) to serialize the response body.
+
+### ExpressNjsonOptions.parse
+
+The `options` passed to [`NJSON.parse`](#njsonparsetext-options) by the middleware to parse the request body.
+
+### ExpressNjsonOptions.stringify
+
+The default `options` passed to [`NJSON.stringify`](#njsonstringifyvalue-options) by
+[`Express.Response.njson`](#expressresponsenjsonbody-options) to serialize the response.
+
+## Express.Response.njson(body[, options])
+
+Encodes the body in NJSON format and sends it; sets the proper `Content-Type` header as well. Installed by
+[`expressNJSON`](#expressnjsonoptions).
+
+- `body`: [&lt;unknown>](https://www.typescriptlang.org/docs/handbook/2/functions.html#unknown) The body to be sent
+  serialized.
+- `options`: [&lt;NjsonStringifyOptions>](#interface-njsonstringifyoptions) The `options` passed to
+  [`NJSON.stringify`](#njsonstringifyvalue-options) to serialize the response body; overrides the default
+  `options.stringify` passed to [`expressNJSON`](#expressnjsonoptions).
+
+## fetchNJSON([options])
+
+Installs the [`Response.njson`](#responsenjsonoptions) method.
+
+- [`options`](#expressnjsonoptionsparse): [&lt;NjsonParseOptions>](#interface-njsonparseoptions) The default `options`
+  passed to [`NJSON.parse`](#njsonparsetext-options) by [`Response.njson`](#responsenjsonoptions) to parse the response
+  body.
+
+## Response.njson([options])
+
+Parses the response body with [`NJSON.parse`](#njsonparsetext-options). Installed by
+[`fetchNJSON`](#fetchnjsonoptions).
+
+- `options`: [&lt;NjsonParseOptions>](#interface-njsonparseoptions) The `options` passed to
+  [`NJSON.parse`](#njsonparsetext-options) to parse the response body; overrides the default `options` passed to
+  [`fetchNJSON`](#fetchnjsonoptions).
+- Returns: [&lt;unknown>](https://www.typescriptlang.org/docs/handbook/2/functions.html#unknown) The body parsed with
+  [`NJSON.parse`](#njsonparsetext-options).
 
 # replacer / reviver
 
@@ -356,16 +452,18 @@ one of them between different architectures may be source of unexpected problems
 # circular / repeated references
 
 Regardless of whether they are omitted, serialized as native values or not, every `Object`s (but `null`), `Function`s
-and `Symbol`s take part in the _repeated referrence algorithm_; long `String`s can take part as well (refer to
+and `Symbol`s take part in the _repeated references algorithm_; long `String`s can take part as well (refer to
 [`NjsonStringifyOptions.stringLength`](#njsonstringifyoptionsstringlength) for details).<br />
 When a repeated reference is encountered, `replacer` and `reviver` are called against the reference, but it is not
-called recursively against its properies. If a property of a repeted reference is changed, the same change has effect
-in all other occurences of the same reference.<br />
+called recursively against its properties. If a property of a repeated reference is changed, the same change has effect
+in all other occurrences of the same reference.<br />
 Circular references are simply special cases of repeated references.
 
 # Compatibility
 
 Requires **Node.js v14**.
+
+**Exception:** [`fetchNJSON`](#fetchnjsonoptions) requires **Node.js v18**.
 
 The package is tested under [all Node.js versions](https://app.travis-ci.com/github/iccicci/next-json)
 currently supported accordingly to [Node.js Release](https://github.com/nodejs/Release#readme).
@@ -386,15 +484,21 @@ Do not hesitate to report any bug or inconsistency [@github](https://github.com/
 
 If you find useful this package, please consider the opportunity to donate on one of following cryptos:
 
+<!-- /* cSpell:disable */ -->
+
 ADA: **DdzFFzCqrhsxfKAujiyG5cv3Bz7wt5uahr9k3hEa8M6LSYQMu9bqc25mG72CBZS3vJEWtWj9PKDUVtfBFcq5hAtDYsZxfG55sCcBeHM9**
 
 BTC: **3BqXRqgCU2CWEoZUgrjU3b6VTR26Hee5gq**
 
 ETH: **0x8039fD67b895fAA1F3e0cF539b8F0290EDe1C042**
 
+<!-- /* cSpell:enable */ -->
+
 # See also
 
 Other projects which aim to solve similar problems:
+
+<!-- /* cSpell:disable */ -->
 
 - [arson](https://github.com/benjamn/arson) by Ben Newman
 - [devalue](https://github.com/Rich-Harris/devalue) by Rich Harris

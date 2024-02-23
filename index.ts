@@ -1,26 +1,63 @@
 import { NJSONError, parse as parser } from "./parser";
 
+/** A function which can be used as `replacer` or `reviver`. */
 export type NjsonFunction = (this: unknown, key: number | string, value: unknown) => unknown;
+
+/** A function that transforms the results or the `Array` of _keys_ to be serialized. */
 export type NjsonReplacer = NjsonFunction | (number | string)[];
 
+/** NJSON parsing options. */
 export interface NjsonParseOptions {
+  /** If `true` the `key` argument passed to `reviver` is of type `number` when reviving an `Array`. */
   numberKey?: boolean;
-  reviver?: NjsonReplacer;
+
+  /** A function that transforms the results. This function is called for each member of the object. If a member contains nested objects, the nested objects are transformed before the parent object is. */
+  reviver?: NjsonFunction;
 }
 
+/** NJSON serializing options. */
 export interface NjsonStringifyOptions {
+  /** Specifies the method to be used to serialize `Date` objects. */
   date?: "iso" | "string" | "time" | "utc";
+
+  /** If `true` the `key` argument passed to `replacer` is of type `number` when replacing an `Array`. */
   numberKey?: boolean;
+
+  /** If `true` the `stack` is omitted when serializing `Error` objects. */
   omitStack?: boolean;
+
+  /** A function that transforms the results or the `Array` of _keys_ to be serialized. */
   replacer?: NjsonReplacer;
+
+  /** If `true` the _keys_ of objects are alphabetically sorted before being serialized. */
   sortKeys?: boolean;
+
+  /** Adds indentation, white space, and line break characters to the return-value NJSON text to make it easier to read. */
   space?: number | string;
+
+  /** When a `string` is longer than `stringLength` character it is considered a reference. */
   stringLength?: number;
+
+  /** If `false`, `undefined` values ar skipped (as JSON.stringify does). */
   undef?: boolean;
 }
 
+/**
+ * Converts a Next JavaScript Object Notation (NJSON) string into an object.
+ *
+ * @param text A valid NJSON string.
+ * @param options A `NjsonParseOptions` specifying the parsing options.
+ */
 function parse<T = unknown>(text: string, options?: NjsonParseOptions): T;
+
+/**
+ * Converts a Next JavaScript Object Notation (NJSON) string into an object.
+ *
+ * @param text A valid NJSON string.
+ * @param reviver A function that transforms the results. This function is called for each member of the object. If a member contains nested objects, the nested objects are transformed before the parent object is.
+ */
 function parse<T = unknown>(text: string, reviver?: NjsonFunction): T;
+
 function parse<T = unknown>(text: string, options?: NjsonParseOptions | NjsonFunction) {
   try {
     const result = parser(text, { grammarSource: "", offset: 0, ...options });
@@ -145,8 +182,23 @@ function nativeRef(stringified: string): ReplacerRef {
 const errors = [EvalError, RangeError, ReferenceError, SyntaxError, TypeError, URIError];
 const typedArrays = [BigInt64Array, BigUint64Array, Float32Array, Float64Array, Int8Array, Int16Array, Int32Array, Uint8Array, Uint8ClampedArray, Uint16Array, Uint32Array];
 
+/**
+ * Converts a JavaScript value to a Next JavaScript Object Notation (NJSON) string.
+ *
+ * @param value A JavaScript value, any value, to be converted.
+ * @param options A `NjsonStringifyOptions` specifying the serializing options.
+ */
 function stringify(value: unknown, options?: NjsonStringifyOptions): string;
+
+/**
+ * Converts a JavaScript value to a Next JavaScript Object Notation (NJSON) string.
+ *
+ * @param value A JavaScript value, any value, to be converted.
+ * @param replacer A function that transforms the results or the `Array` of _keys_ to be serialized.
+ * @param space Adds indentation, white space, and line break characters to the return-value NJSON text to make it easier to read.
+ */
 function stringify(value: unknown, replacer?: NjsonReplacer | null, space?: number | string): string;
+
 function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplacer | null, space?: number | string) {
   let newLine = "";
   let numberKey = false;
@@ -564,4 +616,97 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
   );
 }
 
+/** Next JavaScript Object Notation. */
 export const NJSON = { parse, stringify } as const;
+
+declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
+  namespace Express {
+    interface Response {
+      /**
+       * Sends NJSON response.
+       *
+       * @param body A value sent as body.
+       * @param options A `NjsonStringifyOptions` specifying the body serializing options; defaults to `ExpressNjsonOptions.stringify` passed to `expressNJSON`.
+       */
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      njson(body?: any, options?: NjsonStringifyOptions): Promise<unknown>;
+    }
+  }
+
+  interface Response {
+    /**
+     * Parses the response body with `NJSON.parse`.
+     *
+     * @param options A `NjsonParseOptions` specifying the body parsing options; defaults to `options` passed to `fetchNJSON`.
+     */
+    readonly njson: (options?: NjsonParseOptions) => Promise<unknown>;
+  }
+}
+
+/** `expressNJSON` middleware options. */
+export interface ExpressNjsonOptions {
+  /** A `NjsonParseOptions` specifying the body parsing options. */
+  parse?: NjsonParseOptions;
+
+  /** A `NjsonStringifyOptions` specifying the body serializing options; can be overridden while calling `res.njson()`. */
+  stringify?: NjsonStringifyOptions;
+}
+
+/**
+ * An Express middleware which works as NJSON body parser and installs the `Express.Response.njson` method.
+ *
+ * @param options A `ExpressNjsonOptions` specifying the options to be used while serializing and parsing bodies.
+ */
+export function expressNJSON(options: ExpressNjsonOptions = {}) {
+  const { parse, stringify } = options;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return function(req: any, res: any, next: any) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    res.njson = function njson(this: any, body?: unknown, options?: NjsonStringifyOptions) {
+      this.set({ "Content-Type": "application/njson" });
+      this.end(NJSON.stringify(body, options || stringify));
+    };
+
+    if(req._body || req.headers["content-type"] !== "application/njson") return next();
+
+    const chunks: Buffer[] = [];
+
+    req.on("data", (chunk: Buffer) => chunks.push(chunk));
+    req.on("end", () => {
+      try {
+        req.body = NJSON.parse(Buffer.concat(chunks).toString(req.headers["content-encoding"] || "utf8"), parse);
+        req._body = true;
+        next();
+      } catch(error) {
+        next(error);
+      }
+    });
+  };
+}
+
+/**
+ * Installs the `Response.njson` method.
+ *
+ * @param options The default `NjsonParseOptions` specifying the body parsing options.
+ */
+export function fetchNJSON(options?: NjsonParseOptions) {
+  const _options = options;
+
+  if(Response && Response.prototype) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (Response.prototype as any).njson = async function njson(this: Response, options?: NjsonParseOptions) {
+      try {
+        return NJSON.parse(await this.text(), options || _options);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch(error: any) {
+        const { stack } = error;
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const [first, _, ...rest] = stack.split("\n");
+        Object.defineProperty(error, "stack", { configurable: true, enumerable: false, value: [first, ...rest].join("\n") });
+        throw error;
+      }
+    };
+  }
+}
