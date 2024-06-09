@@ -225,7 +225,7 @@ const response = await fetch("http://localhost:3000/mirror", {
   headers: { "Content-Type": "application/njson" }, // there is an 'n' more than usual
   method: "POST"
 });
-const body = await response.njson({}); // there is an 'n' more than usual
+const body = await response.njson(); // there is an 'n' more than usual
 ```
 
 Here `payload` deep equals `payload.circular`, which deep equals `body`, which deep equals `body.circular`, which deep

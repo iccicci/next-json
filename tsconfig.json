@@ -3,17 +3,19 @@
     "alwaysStrict": true,
     "declaration": false,
     "esModuleInterop": true,
-    "lib": ["ES2022"],
-    "moduleResolution": "Node",
+    "forceConsistentCasingInFileNames": true,
+    "lib": ["dom", "es2022"],
+    "module": "commonjs",
     "noImplicitAny": true,
     "noImplicitReturns": true,
     "noImplicitThis": true,
+    "skipLibCheck": true,
     "strict": true,
     "strictBindCallApply": true,
     "strictFunctionTypes": true,
     "strictNullChecks": true,
     "strictPropertyInitialization": true,
-    "target": "ESNext"
+    "target": "es2020"
   },
   "include": ["./*.ts", "./test/*.ts"]
 }
