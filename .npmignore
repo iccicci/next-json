@@ -1,9 +1,10 @@
 .*
+*.tgz
 Makefile
 coverage
 generate.ts
 index.ts
-jest.config.js
+jest.config.cjs
 next-json.pegjs
 parser.ts
 test

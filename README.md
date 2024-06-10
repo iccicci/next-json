@@ -81,6 +81,8 @@ On the other hand, the result of the deserialization of a _valid JSON encoded st
 produce a value _deep equal_ to the value produced by `JSON.parse` and the `reviver` function will be called the same
 amount of times, with the same parameters and in the same order.
 
+**Note:** the `reviver` function still not implements the newly added `context` argument.
+
 Taken the result of a `JSON.parse` call (i.e. a value which contains only _valid JSON values_), if serialized through
 `JSON.stringify` or `NJSON.stringify` produces two equal strings and the `replacer` function will be called the same
 amount of times, with the same parameters and in the same order.
@@ -291,6 +293,8 @@ If `true`, the `reviver` function, for `Array` elements, will be called with the
 As the
 [`reviver`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse#parameters)
 parameter of `JSON.parse`. See also [replacer / reviver](#replacer--reviver) for NJSON specific details.
+
+**Note:** the `reviver` function still not implements the newly added `context` argument.
 
 ## interface NjsonStringifyOptions
 

@@ -41,10 +41,12 @@ describe("options", () => {
       const njsonResult1 = NJSON.parse(value, njsonReviver1);
       const njsonResult2 = NJSON.parse(value, { reviver: njsonReviver2 });
 
-      expect(njsonReviver1.mock.calls).toStrictEqual(jsonReviver.mock.calls);
+      const expectedCalls = jsonReviver.mock.calls.map(([a, b]) => [a, b]);
+
+      expect(njsonReviver1.mock.calls).toStrictEqual(expectedCalls);
       expect(njsonReviver1.mock.contexts).toStrictEqual(njsonReviver1.mock.contexts);
       expect(njsonReviver1.mock.results).toStrictEqual(jsonReviver.mock.results);
-      expect(njsonReviver2.mock.calls).toStrictEqual(jsonReviver.mock.calls);
+      expect(njsonReviver2.mock.calls).toStrictEqual(expectedCalls);
       expect(njsonReviver2.mock.contexts).toStrictEqual(njsonReviver1.mock.contexts);
       expect(njsonReviver2.mock.results).toStrictEqual(jsonReviver.mock.results);
       expect(njsonResult1).toStrictEqual(jsonResult);

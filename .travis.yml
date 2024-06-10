@@ -1,5 +1,5 @@
 after_script:
-  - "if [[ `node --version` =~ ^v20 ]] ; then ./cc-test-reporter after-build --exit-code $TRAVIS_TEST_RESULT ; fi"
+  - "if [[ `node --version` =~ ^v22 ]] ; then ./cc-test-reporter after-build --exit-code $TRAVIS_TEST_RESULT ; fi"
 
 before_script:
   - "curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter"
@@ -16,10 +16,9 @@ env:
 install: yarn --frozen-lockfile --ignore-engines
 
 node_js:
+  - "22"
   - "20"
   - "18"
-  - "16"
-  - "14"
 
 language: node_js
 script: "yarn coverage"

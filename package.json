@@ -21,8 +21,8 @@
     "peggy": "3.0.2",
     "prettier": "3.3.1",
     "ts-jest": "29.1.4",
-    "ts-node": "10.9.2",
     "ts-pegjs": "3.1.0",
+    "tsx": "4.15.1",
     "typescript": "5.4.5"
   },
   "engines": {
@@ -73,12 +73,12 @@
     "build": "make build",
     "coverage": "TZ=Europe/Rome jest --coverage",
     "deploy": "make deploy",
-    "generate": "ts-node generate.ts",
     "precoverage": "make",
     "pretest": "make",
     "test": "TZ=Europe/Rome jest"
   },
   "sideEffects": false,
+  "type": "module",
   "types": "./dist/types/index.d.ts",
-  "version": "0.3.1"
+  "version": "0.3.2"
 }
