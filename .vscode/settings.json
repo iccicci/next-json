@@ -1,10 +1,13 @@
 {
-  "cSpell.words": ["daniele", "elems", "linebreak", "njson", "nonblock", "nonwords", "parens", "pegjs", "precoverage", "ricci", "rmzrtb", "satoshis", "tspegjs"],
-  "editor.codeActionsOnSave": ["source.formatDocument", "source.fixAll.eslint"],
+  "[javascript]": { "editor.formatOnSave": false },
+  "[typescript]": { "editor.formatOnSave": false },
+  "cSpell.words": ["compat", "daniele", "elems", "linebreak", "njson", "nonblock", "nonwords", "parens", "pegjs", "precoverage", "ricci", "rmzrtb", "satoshis", "tspegjs"],
+  "editor.codeActionsOnSave": ["source.formatDocument", "source.fixAll.eslint", "source.fixAll.eslint"],
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.formatOnSave": true,
-  "eslint.alwaysShowStatus": true,
-  "eslint.debug": true,
+  "eslint.nodePath": "./node_modules/.bin/eslint",
+  "eslint.options": { "overrideConfigFile": "./eslint.config.mjs" },
+  "eslint.useFlatConfig": true,
   "eslint.validate": ["javascript", "typescript"],
   "explorer.confirmDelete": false,
   "files.autoSave": "off",
@@ -12,9 +15,8 @@
   "files.insertFinalNewline": true,
   "files.trimFinalNewlines": true,
   "git.ignoreMissingGitWarning": true,
+  "makefile.configureOnOpen": false,
   "typescript.tsdk": "node_modules/typescript/lib",
   "typescript.validate.enable": true,
-  "window.zoomLevel": 0,
-  "[javascript]": { "editor.formatOnSave": false },
-  "[typescript]": { "editor.formatOnSave": false }
+  "window.zoomLevel": 0
 }

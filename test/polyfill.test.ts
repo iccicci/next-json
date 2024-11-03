@@ -27,9 +27,9 @@ describe("polyfill", () => {
     beforeAll(done => {
       app.use(expressNJSON());
 
-      app.all("/json", (_, res) => res.json(jsonPayload));
-      app.all("/njson", (_, res) => res.njson(njsonPayload));
-      app.all("/text", (_, res) => res.set({ "Content-Type": "text/plain" }).end("text"));
+      app.all("/json", (_, res) => res.json(jsonPayload) as unknown as void);
+      app.all("/njson", (_, res) => res.njson(njsonPayload) as unknown as void);
+      app.all("/text", (_, res) => res.set({ "Content-Type": "text/plain" }).end("text") as unknown as void);
 
       server = app.listen(2323, done);
     });
@@ -96,7 +96,7 @@ describe("polyfill", () => {
 
       app.use(expressNJSON({ parse: options }));
 
-      app.all("/mirror", (req, res) => res.njson(req.body));
+      app.all("/mirror", (req, res) => res.njson(req.body) as unknown as void);
 
       server = app.listen(2324, done);
     });
@@ -160,8 +160,8 @@ describe("polyfill", () => {
     beforeAll(done => {
       app.use(expressNJSON({ stringify: { date: "utc" } }));
 
-      app.all("/default", (_, res) => res.njson(payload));
-      app.all("/override", (_, res) => res.njson(payload, {}));
+      app.all("/default", (_, res) => res.njson(payload) as unknown as void);
+      app.all("/override", (_, res) => res.njson(payload, {}) as unknown as void);
 
       server = app.listen(2325, done);
     });

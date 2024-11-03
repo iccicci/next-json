@@ -69,7 +69,7 @@ This package is intended to offer something as great as JSON... trying to add so
 - &#9745; supports `Map`
 - &#9745; supports `RegExp`
 - &#9745; supports `Set`
-- &#9745; supports `TypedArray`s
+- &#9745; supports `TypedArray`s (but `Float16Array`)
 - &#9745; supports `URL`
 
 ## NJSON extends JSON
@@ -109,20 +109,21 @@ the details.
 **NJSON** is designed to _serialize_ / _deserialize_ complex data to be shared between different systems, possibly
 written with other languages than JavaScript (once implementations in other languages will be written). Even if
 JavaScript can see a function as a piece of data, it is actually code, not data. More than this, for other languages,
-may be a complex problem execute JavaScript functions.
+may be a complex problem to execute JavaScript functions.
 
 Last but not least, allowing the deserialization of a function would open once again the security hole implied by the
 use of `eval`, and one of the reasons why **NJSON** was born, is exactly to avoid that security hole.
 
 ### Symbol
 
-A `Symbol` is something strictly bound to the JavaScript execution environment which instantiate it: sharing it between
-distinct systems is something almost meaningless.
+A `Symbol` is something strictly bound to the JavaScript execution environment which instantiates it: sharing it
+between distinct systems is something almost meaningless.
 
 ### TypedArray
 
 **Note:** except for `Int8Array`, `Uint8Array` and `Uint8ClampedArray`, `TypedArray`s are platform dependant: they are
-supported, but trying to transfer one of them between different architectures may be source of unexpected problems.
+supported (but `Float16Array` as it is not supported by **Node.js**), but trying to transfer one of them between
+different architectures may be source of unexpected problems.
 
 ## The `Error` exception
 
@@ -189,12 +190,14 @@ const obj = { test: Infinity };
 const set = new Set();
 const arr = [NaN, obj, set];
 
+arr.push(arr);
+arr.push(obj);
+obj.arr = arr;
 set.add(obj);
 set.add(arr);
-arr.push(arr);
 
 console.log(NJSON.stringify(arr));
-// ((A,B)=>{B.push(A,new Set([A,B]),B);return B})({"test":Infinity},[NaN])
+// ((A,B)=>{B.push(Object.assign(A,{"arr":B}),new Set([A,B]),B,A);return B})({"test":Infinity},[NaN])
 ```
 
 # Polyfill
@@ -450,8 +453,6 @@ For `Set`s the `key` argument is a positive integer and it is passed in a `Numbe
 ### TypedArray
 
 Unlike `JSON`, `NJSON` does not call `replacer` and `reviver` for each element.
-Except for `Int8Array`, `Uint8Array` and `Uint8ClampedArray`, `TypedArray`s are platform dependant: trying to transfer
-one of them between different architectures may be source of unexpected problems.
 
 # circular / repeated references
 

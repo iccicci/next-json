@@ -10,5 +10,7 @@ build: parser.ts
 deploy: build
 	npm_config_registry="https://registry.npmjs.org/" npm publish
 
-parser.ts: generate.ts next-json.pegjs
+parser.ts: Makefile generate.ts next-json.pegjs
 	tsx generate.ts
+	sed -i 's|this.constructor = child|\n// @ts-ignore\nthis.constructor = child|' parser.ts
+	eslint --fix parser.ts

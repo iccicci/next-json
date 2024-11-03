@@ -1,1 +1,16 @@
-{ "bigNegative": -1e50, "smallNegative": -1e-50, "integerNegative": -1, "zero": 0, "integerPositive": 1, "smallPositive": 1e-50, "bitPositive": 1e50 }
+{
+  "bigNegative": -1e50,
+  "smallNegative": -1e-50,
+  "integerNegative": -1,
+  "zero": 0,
+  "integerPositive": 1,
+  "smallPositive": 1e-50,
+  "bitPositive": 1e50,
+  "float": 1.5,
+  "negativeFloat": -1.5,
+  "bigFloat": 1.5e50,
+  "bigNegativeFloat": -1.5e50,
+  "smallFloat": 1.5e-50,
+  "smallNegativeFloat": -1.5e-50,
+  "tooMuchLongInteger": 12345678901234567890123456789012345678901234567890
+}

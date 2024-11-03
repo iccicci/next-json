@@ -1,0 +1,1 @@
+[new BigInt64Array([-1n,0n,1n]),new BigUint64Array([0n,1n,2n]),new Float64Array([-3,4.5]),new BigInt64Array(),new BigUint64Array(),new Float64Array()]
