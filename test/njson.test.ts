@@ -153,6 +153,7 @@ describe("NJSON", () => {
             error = getError(parsed);
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } catch(e: any) {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
             throw new Error(`${e.message} parsing '${str}'`);
           }
         });
@@ -164,7 +165,7 @@ describe("NJSON", () => {
         it("stack", () => expect(error.stack).toBe(stack));
       });
 
-    const fakeStack = (e: Error) => Object.defineProperty(e, "stack", { enumerable: false, value: e.stack?.split("\n")[0] + "\n    njson stack", writable: true });
+    const fakeStack = (e: Error) => Object.defineProperty(e, "stack", { enumerable: false, value: `${e.stack?.split("\n")[0]  }\n    njson stack`, writable: true });
     const cause = fakeStack(new Error("cause"));
     const setCause = (e: Error, value: unknown = cause) => Object.defineProperty(e, "cause", { enumerable: false, value, writable: true });
     const longMessage = "long njson message";

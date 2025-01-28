@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unnecessary-condition */
 import { NJSONError, parse as parser } from "./parser";
 
 /** A function which can be used as `replacer` or `reviver`. */
@@ -11,7 +12,10 @@ export interface NjsonParseOptions {
   /** If `true` the `key` argument passed to `reviver` is of type `number` when reviving an `Array`. */
   numberKey?: boolean;
 
-  /** A function that transforms the results. This function is called for each member of the object. If a member contains nested objects, the nested objects are transformed before the parent object is. */
+  /**
+   * A function that transforms the results. This function is called for each member of the object.
+   * If a member contains nested objects, the nested objects are transformed before the parent object is.
+   */
   reviver?: NjsonFunction;
 }
 
@@ -48,19 +52,22 @@ export interface NjsonStringifyOptions {
  * @param text A valid NJSON string.
  * @param options A `NjsonParseOptions` specifying the parsing options.
  */
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
 function parse<T = unknown>(text: string, options?: NjsonParseOptions): T;
 
 /**
  * Converts a Next JavaScript Object Notation (NJSON) string into an object.
  *
  * @param text A valid NJSON string.
- * @param reviver A function that transforms the results. This function is called for each member of the object. If a member contains nested objects, the nested objects are transformed before the parent object is.
+ * @param reviver A function that transforms the results. This function is called for each member of the object.
+ * If a member contains nested objects, the nested objects are transformed before the parent object is.
  */
+// eslint-disable-next-line @typescript-eslint/unified-signatures, @typescript-eslint/no-unnecessary-type-parameters
 function parse<T = unknown>(text: string, reviver?: NjsonFunction): T;
 
-function parse<T = unknown>(text: string, options?: NjsonParseOptions | NjsonFunction) {
+function parse<T = unknown>(text: string, options?: NjsonParseOptions | NjsonFunction): T {
   try {
-    const result = parser(text, { grammarSource: "", offset: 0, ...options });
+    const result = parser(text, { grammarSource: "", offset: 0, ...(typeof options === "function" ? undefined : options) }) as unknown as T;
 
     if(typeof options === "function") options = { reviver: options };
     if(! options) options = {};
@@ -70,7 +77,7 @@ function parse<T = unknown>(text: string, options?: NjsonParseOptions | NjsonFun
     const references: unknown[] = [];
 
     function revive(context: unknown, key: number | string, value: unknown, skip?: boolean, skipNext?: boolean): unknown {
-      if(value && typeof value === "object" && ! (value instanceof Date) && ! (value instanceof RegExp) && ! (value instanceof URL) && ! ArrayBuffer.isView(value) && references.indexOf(value) === -1) {
+      if(value && typeof value === "object" && ! (value instanceof Date) && ! (value instanceof RegExp) && ! (value instanceof URL) && ! ArrayBuffer.isView(value) && ! references.includes(value)) {
         references.push(value);
 
         if(value instanceof Array) for(const [i, _] of value.entries()) value[i] = revive(value, numberKey ? i : i.toString(), _, skipNext);
@@ -329,14 +336,14 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
                   const args = elements.slice(push, elements.length);
 
                   this.statement = function(this: ReplacerRef) {
-                    return `${indent}${this.identifier}.push(${newLine}${args.map(_ => twoIndent + _.stringify(twoIndent, true)).join("," + newLine)}${newLine}${indent})`;
+                    return `${indent}${this.identifier}.push(${newLine}${args.map(_ => twoIndent + _.stringify(twoIndent, true)).join(`,${newLine}`)}${newLine}${indent})`;
                   };
                 }
               }
 
               const nextIndent = currIndent + indent;
 
-              return elems.length ? `[${newLine}${elems.map(_ => nextIndent + _.stringify(nextIndent, body)).join("," + newLine)}${newLine}${currIndent}]` : "[]";
+              return elems.length ? `[${newLine}${elems.map(_ => nextIndent + _.stringify(nextIndent, body)).join(`,${newLine}`)}${newLine}${currIndent}]` : "[]";
             }
 
             rest = { argument, elements, stringify };
@@ -387,7 +394,7 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
                   : this.identifier;
               }
 
-              return elems.length ? `new Map([${newLine}${elems.map(_ => nextIndent + _.stringify(nextIndent, body)).join("," + newLine)}${newLine}${currIndent}])` : "new Map()";
+              return elems.length ? `new Map([${newLine}${elems.map(_ => nextIndent + _.stringify(nextIndent, body)).join(`,${newLine}`)}${newLine}${currIndent}])` : "new Map()";
             }
 
             rest = { argument, elements, stringify };
@@ -428,7 +435,7 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
                 return args.length ? `${this.identifier}${newLine}${args.map(_ => `${nextIndent}.add(${_.stringify(nextIndent, true)})`).join(newLine)}` : this.identifier;
               }
 
-              return elems.length ? `new Set([${newLine}${elems.map(_ => nextIndent + _.stringify(nextIndent, body)).join("," + newLine)}${newLine}${currIndent}])` : "new Set()";
+              return elems.length ? `new Set([${newLine}${elems.map(_ => nextIndent + _.stringify(nextIndent, body)).join(`,${newLine}`)}${newLine}${currIndent}])` : "new Set()";
             }
 
             rest = { argument, elements, stringify };
@@ -440,17 +447,19 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
             break;
           }
 
+          // eslint-disable-next-line no-case-declarations
           const id = typedArrays.findIndex(_ => value instanceof _);
 
           if(id !== -1) {
             const {
               name,
+              // eslint-disable-next-line @typescript-eslint/unbound-method
               prototype: { toString }
             } = typedArrays[id];
             const bigint = value instanceof BigInt64Array || value instanceof BigUint64Array;
             const stringified = toString.call(value);
 
-            rest = nativeRef(stringified.length ? `new ${name}([${bigint ? stringified.replace(/,/g, "n,") + "n" : stringified}])` : `new ${name}()`);
+            rest = nativeRef(stringified.length ? `new ${name}([${bigint ? `${stringified.replace(/,/g, "n,")}n` : stringified}])` : `new ${name}()`);
           } else {
             const args: [string, ReplacerRef][] = [];
             const elements: [string, ReplacerRef][] = [];
@@ -481,7 +490,7 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
               if(stack && ! stack.exclude) elements.push(["stack", stack]);
 
               for(const [key, val] of entries) {
-                if(["cause", "message", "name", "stack"].indexOf(key) === -1) {
+                if(! ["cause", "message", "name", "stack"].includes(key)) {
                   const replaced = replace(value, key, val);
 
                   if(! replaced.exclude) elements.push([key, replaced]);
@@ -513,7 +522,7 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
                 const assign = () =>
                   `Object.assign(${newLine}${nextIndent}${this.identifier && body ? this.identifier : construct(nextNextIndent)},${newLine}${nextIndent}{${newLine}${elements
                     .map(_ => `${nextNextIndent}${JSON.stringify(_[0])}:${separator}${_[1].stringify(nextNextIndent, body)}`)
-                    .join("," + newLine)}${newLine}${nextIndent}}${newLine}${currIndent})`;
+                    .join(`,${newLine}`)}${newLine}${nextIndent}}${newLine}${currIndent})`;
 
                 if(! this.already && this.identifier && body) {
                   this.already = true;
@@ -553,14 +562,14 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
 
                   return `Object.assign(${newLine}${nextIndent}${this.identifier},${newLine}${nextIndent}{${newLine}${args
                     .map(_ => `${nextNextIndent}${JSON.stringify(_[0])}:${separator}${_[1].stringify(nextNextIndent, true)}`)
-                    .join("," + newLine)}${newLine}${nextIndent}}${newLine}${currIndent})`;
+                    .join(`,${newLine}`)}${newLine}${nextIndent}}${newLine}${currIndent})`;
                 }
 
                 return this.identifier;
               }
 
               return elems.length
-                ? `{${newLine}${elems.map(_ => `${nextIndent}${JSON.stringify(_[0])}:${separator}${_[1].stringify(nextIndent, body)}`).join("," + newLine)}${newLine}${currIndent}}`
+                ? `{${newLine}${elems.map(_ => `${nextIndent}${JSON.stringify(_[0])}:${separator}${_[1].stringify(nextIndent, body)}`).join(`,${newLine}`)}${newLine}${currIndent}}`
                 : "{}";
             }
 
@@ -580,7 +589,7 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
 
     switch(typeof value) {
     case "bigint":
-      return nativeRef(value.toString() + "n");
+      return nativeRef(`${value.toString()}n`);
     case "boolean":
     case "number":
       return nativeRef(Object.is(value, -0) ? "-0" : value.toString());
@@ -611,7 +620,7 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
   statements.push(`${indent}return ${replaced.stringify(indent, true)}`);
 
   return (
-    `((${identifiers.map(_ => _.identifier).join("," + separator)})${separator}=>${separator}{${newLine}${statements.join(";" + newLine)}${newLine}})` +
+    `((${identifiers.map(_ => _.identifier).join(`,${separator}`)})${separator}=>${separator}{${newLine}${statements.join(`;${newLine}`)}${newLine}})` +
     `(${newLine}${indent}${args.join(`,${newLine}${indent}`)}${newLine})`
   );
 }
@@ -620,7 +629,6 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
 export const NJSON = { parse, stringify } as const;
 
 declare global {
-  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Response {
       /**
@@ -643,6 +651,10 @@ declare global {
     readonly njson: (options?: NjsonParseOptions) => Promise<unknown>;
   }
 }
+
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 
 /** `expressNJSON` middleware options. */
 export interface ExpressNjsonOptions {
@@ -669,6 +681,7 @@ export function expressNJSON(options: ExpressNjsonOptions = {}) {
       this.end(NJSON.stringify(body, options || stringify));
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     if(req._body || req.headers["content-type"] !== "application/njson") return next();
 
     const chunks: Buffer[] = [];
@@ -676,6 +689,7 @@ export function expressNJSON(options: ExpressNjsonOptions = {}) {
     req.on("data", (chunk: Buffer) => chunks.push(chunk));
     req.on("end", () => {
       try {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         req.body = NJSON.parse(Buffer.concat(chunks).toString(req.headers["content-encoding"] || "utf8"), parse);
         req._body = true;
         next();
@@ -694,7 +708,7 @@ export function expressNJSON(options: ExpressNjsonOptions = {}) {
 export function fetchNJSON(options?: NjsonParseOptions) {
   const _options = options;
 
-  if(Response && Response.prototype) {
+  if(Response?.prototype) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (Response.prototype as any).njson = async function njson(this: Response, options?: NjsonParseOptions) {
       try {

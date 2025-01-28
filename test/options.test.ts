@@ -32,11 +32,13 @@ describe("options", () => {
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const reviver = function(this: any, key: number | string, value: unknown) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         return key === "0" && this.length === 3 ? null : key === "false" ? false : value;
       };
       const jsonReviver = jest.fn(reviver);
       const njsonReviver1 = jest.fn(reviver);
       const njsonReviver2 = jest.fn(reviver);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const jsonResult = JSON.parse(value, jsonReviver);
       const njsonResult1 = NJSON.parse(value, njsonReviver1);
       const njsonResult2 = NJSON.parse(value, { reviver: njsonReviver2 });
@@ -122,6 +124,7 @@ describe("options", () => {
     it("function replacer", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const replacer = function(this: any, key: number | string, value: unknown) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         return key === "0" && this.length === 3 ? "null" : key === "false" ? true : value;
       };
       const jsonReplacer = jest.fn(replacer);

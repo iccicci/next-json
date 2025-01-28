@@ -13,4 +13,3 @@ deploy: build
 parser.ts: Makefile generate.ts next-json.pegjs
 	tsx generate.ts
 	sed -i 's|this.constructor = child|\n// @ts-ignore\nthis.constructor = child|' parser.ts
-	eslint --fix parser.ts

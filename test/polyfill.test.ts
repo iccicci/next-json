@@ -1,10 +1,11 @@
+/* eslint-disable @typescript-eslint/no-invalid-void-type */
 import express from "express";
 import { Server } from "http";
 
 import { expressNJSON, fetchNJSON, NJSON, NjsonParseOptions } from "../index";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const njsonPayload: any = ["test"];
+const njsonPayload: any[] = ["test"];
 njsonPayload.push(njsonPayload);
 
 const options: NjsonParseOptions = {
@@ -14,7 +15,7 @@ const options: NjsonParseOptions = {
 
 fetchNJSON(options);
 
-const match = process.version.match(/v(\d+)/);
+const match = /v(\d+)/.exec(process.version);
 const ge20 = match && parseInt(match[1], 10) >= 20;
 
 describe("polyfill", () => {
@@ -54,6 +55,7 @@ describe("polyfill", () => {
         await res.njson();
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch(error: any) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         expect(error.stack).not.toMatch("next-json/index");
       }
     });
@@ -87,7 +89,7 @@ describe("polyfill", () => {
     beforeAll(done => {
       app.use((req, _, next) => {
         if(req.headers["content-type"] === "test") {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
           (req as any)._body = true;
           req.body = "test";
         }

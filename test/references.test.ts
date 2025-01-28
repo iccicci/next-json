@@ -230,11 +230,11 @@ const thrownMessage = "thrown error";
 const thrownError = new EvalError(thrownMessage);
 const array7 = [describe, describe, originalError, thrownError, thrownError];
 
-Object.defineProperties(originalError, { stack: { configurable: true, value: originalError.stack?.split("\n")[0] + "\n    original stack", writable: true } });
+Object.defineProperties(originalError, { stack: { configurable: true, value: `${originalError.stack?.split("\n")[0]}\n    original stack`, writable: true } });
 Object.defineProperties(thrownError, {
   cause: { configurable: true, value: originalError, writable: true },
   name:  { configurable: true, value: "TestError", writable: true },
-  stack: { configurable: true, value: thrownError.stack?.split("\n")[0] + "\n    thrown stack", writable: true }
+  stack: { configurable: true, value: `${thrownError.stack?.split("\n")[0]}\n    thrown stack`, writable: true }
 });
 
 const errors = {

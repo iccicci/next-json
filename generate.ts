@@ -3,18 +3,6 @@ import peggy, { ParserBuildOptions } from "peggy";
 import tspegjs from "ts-pegjs";
 
 const customHeader = `\
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-/* eslint-disable @typescript-eslint/no-empty-object-type */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable curly */
-/* eslint-disable indent */
-/* eslint-disable key-spacing */
-/* eslint-disable keyword-spacing */
-/* eslint-disable no-var */
-/* eslint-disable sort-keys/sort-keys-fix */
-/* eslint-disable space-unary-ops */
-
 const errors = { Error, EvalError, RangeError, ReferenceError, SyntaxError, TypeError, URIError };
 type Errors = keyof typeof errors;
 
