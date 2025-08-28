@@ -71,14 +71,14 @@ describe("polyfill", () => {
       const res = await fetch("http://localhost:2323/njson");
       const body = await res.njson();
 
-      expect(NJSON.stringify(body)).toBe('((A)=>{A.push(A);return A})(["njson"])');
+      expect(NJSON.stringify(body)).toBe('((A)=>Object.assign(A,{"1":A}))(["njson"])');
     });
 
     it("parses the body overriding the default options", async () => {
       const res = await fetch("http://localhost:2323/njson");
       const body = await res.njson({});
 
-      expect(NJSON.stringify(body)).toBe('((A)=>{A.push(A);return A})(["test"])');
+      expect(NJSON.stringify(body)).toBe('((A)=>Object.assign(A,{"1":A}))(["test"])');
     });
   });
 
@@ -137,7 +137,7 @@ describe("polyfill", () => {
       });
       const body = await res.njson({});
 
-      expect(NJSON.stringify(body)).toBe('((A)=>{A.push(A);return A})(["njson"])');
+      expect(NJSON.stringify(body)).toBe('((A)=>Object.assign(A,{"1":A}))(["njson"])');
     });
 
     it("gives error with wrong NJSON encoded string", async () => {

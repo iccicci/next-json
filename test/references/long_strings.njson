@@ -1,13 +1,15 @@
-((A, B) => {
-  B.push(
-    [
-      A,
-      B
-    ],
-    A
-  );
-  return B
-})(
+((A, B) =>
+  Object.assign(
+    B,
+    {
+      "0": [
+        A,
+        B
+      ],
+      "1": A
+    }
+  )
+)(
   "long string",
   []
 )

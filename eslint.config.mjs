@@ -1,12 +1,12 @@
 import js from "@eslint/js";
-import stylisticJs from "@stylistic/eslint-plugin-js";
+import stylistic from "@stylistic/eslint-plugin";
 import _import from "eslint-plugin-import";
 import simpleImportSort from "eslint-plugin-simple-import-sort";
 import sortKeys from "eslint-plugin-sort-keys";
 import globals from "globals";
 import tsEslint from "typescript-eslint";
 
-const overrides = { catch: { after: false }, for: { after: false }, if: { after: false }, switch: { after: false }, while: { after: false } };
+const overrides = { for: { after: false }, if: { after: false }, switch: { after: false }, while: { after: false } };
 const unusedVarsOptions = { argsIgnorePattern: "^_", caughtErrors: "none", ignoreRestSiblings: true };
 
 export default tsEslint.config(
@@ -22,10 +22,10 @@ export default tsEslint.config(
         tsconfigRootDir: import.meta.dirname
       }
     },
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    plugins: { "@stylistic/js": stylisticJs, import: _import, "simple-import-sort": simpleImportSort, "sort-keys": sortKeys },
+    plugins: { "@stylistic": stylistic, import: _import, "simple-import-sort": simpleImportSort, "sort-keys": sortKeys },
     rules:   {
-      "@stylistic/js/keyword-spacing":                             ["error", { before: true, overrides }],
+      "@stylistic/keyword-spacing":                                ["error", { after: true, before: true, overrides }],
+      "@stylistic/space-before-function-paren":                    ["error", { anonymous: "never", asyncArrow: "always", catch: "never", named: "never" }],
       "@typescript-eslint/consistent-type-definitions":            "off",
       "@typescript-eslint/no-confusing-void-expression":           "off",
       "@typescript-eslint/no-dynamic-delete":                      "off",
@@ -62,7 +62,6 @@ export default tsEslint.config(
       "simple-import-sort/imports":                                "error",
       "sort-keys":                                                 "off",
       "sort-keys/sort-keys-fix":                                   "error",
-      "space-before-function-paren":                               ["error", { anonymous: "never", asyncArrow: "always", named: "never" }],
       "space-unary-ops":                                           ["error", { nonwords: false, overrides: { "!": true }, words: true }]
     }
   }

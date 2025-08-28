@@ -136,9 +136,8 @@ small_number = value:number
 
 object_assign = "Object" wss dot "assign" wss open_round dest:value comma source:value closed_round
   {
-    if(Object.assign(dest, source) instanceof Error && (source.message || source.name) && ! source.stack) {
+    if(Object.assign(dest, source) instanceof Error && (source.message || source.name) && ! source.stack)
       dest.stack = `${dest.name}: ${dest.message}\n    from NJSON`;
-    }
 
     return dest;
   }
@@ -151,11 +150,19 @@ error =
     const props = { configurable: true, value: undefined, writable: true };
     const val = new constructor(message);
 
-    return Object.defineProperties(val, { "cause": props, "stack": {...props,value:`${err}: ${message}\n    from NJSON`} });
+    return Object.defineProperties(val, { cause: props, stack: { ...props, value: `${err}: ${message}\n    from NJSON` } });
   }
 
 function = open_round parameters "=>" wss body closed_round arguments
   {
+    const { value } = options!;
+
+    if(value) {
+      Object.assign(options!, { body: true, running: true, offset: value[1] });
+
+      return peg$parse(value[0], options);
+    }
+
     Object.assign(options!, { body: true, running: true, startRule: "statement" });
 
     for(const statement of options!.statements) {
@@ -186,7 +193,11 @@ parameters = open_round params:(head:identifier tail:(comma @identifier)* { retu
     return null;
   }
 
-body = open_brace statements:(head:statement tail:(";" wss @statement)* { return [head, ...tail]; }) closed_brace { Object.assign(options!, { body: false, statements }); }
+body_value = value { Object.assign(options!, { body: false, value: [text(), location()] }); }
+
+body =
+  (open_brace statements:(head:statement tail:(";" wss @statement)* { return [head, ...tail]; }) closed_brace { Object.assign(options!, { body: false, statements }); }) /
+  (open_round @body_value closed_round) / body_value
 
 statement = chain / return
 

@@ -1,5 +1,5 @@
-((A) =>
-  A
+((A) => {
+  return A
     .add(new Set([
       23,
       42,
@@ -9,7 +9,7 @@
       }
     ]))
     .add(new Int8Array([23,42]))
-)(
+})(
   new Set([
     "njson"
   ])

@@ -1,5 +1,5 @@
-((A, B) =>
-  [
+((A, B) => {
+  return [
     null,
     null,
     A,
@@ -13,7 +13,7 @@
     ),
     B
   ]
-)(
+})(
   Object.assign(
     new RangeError("original error"),
     {

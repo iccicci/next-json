@@ -43,6 +43,7 @@ describe("options", () => {
       const njsonResult1 = NJSON.parse(value, njsonReviver1);
       const njsonResult2 = NJSON.parse(value, { reviver: njsonReviver2 });
 
+      // Required to make the test to pass also when the context parameter will be added
       const expectedCalls = jsonReviver.mock.calls.map(([a, b]) => [a, b]);
 
       expect(njsonReviver1.mock.calls).toStrictEqual(expectedCalls);
@@ -118,7 +119,7 @@ describe("options", () => {
       const arr: unknown[] = [NaN, obj2, set];
       set.add(arr);
       arr.push(arr);
-      expect(NJSON.stringify(arr)).toBe('((A,B)=>{B.push(A,new Set([A,B]),B);return B})({"test":Infinity},[NaN])');
+      expect(NJSON.stringify(arr)).toBe('((A,B)=>Object.assign(B,{"1":A,"2":new Set([A,B]),"3":B}))({"test":Infinity},[NaN])');
     });
 
     it("function replacer", () => {

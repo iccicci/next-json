@@ -1,5 +1,5 @@
-((A, B, C) =>
-  [
+((A, B, C) => {
+  return [
     new Set(),
     new Map(),
     A,
@@ -9,7 +9,7 @@
     B,
     C
   ]
-)(
+})(
   new Uint8Array([110,106,115,111,110]),
   new Map(),
   new Set([

@@ -48,29 +48,79 @@ JSON is awesome mainly for two reasons:
 
 ... but it has some limitations:
 
-- doesn't support `undefined` values,
-- doesn't support `BigInt` numbers,
-- doesn't support many other features...
+- &#10060; loses `undefined`, `NaN`, `Infinity`, `-0`
+- &#10060; throws `TypeError` serializing circular references
+- &#10060; cannot handle `BigInt`, `Date`, `Error`, `Map`, `RegExp`, `Set`, `URL`
+- &#10060; doesn't support many other features...
 
 This package is intended to offer something as great as JSON... trying to add something more.
 
 ## NJSON Features
 
-- &#9745; extends JSON
-- &#9745; supports C style comments
-- &#9745; supports escaped new line in strings
-- &#9745; supports trailing commas
-- &#9745; supports circular and repeated references
-- &#9745; supports `undefined`
-- &#9745; supports `-0`, `NaN` and `Infinity`
-- &#9745; supports `BigInt`
-- &#9745; supports `Date`
-- &#9745; supports `Error` (with [exception](#the-error-exception))
-- &#9745; supports `Map`
-- &#9745; supports `RegExp`
-- &#9745; supports `Set`
-- &#9745; supports `TypedArray`s (but `Float16Array`)
-- &#9745; supports `URL`
+- &#10004; extends JSON
+- &#10004; safe parser: doesn't use `eval`
+- &#10004; JavaScript compatible: same result from `parse` and `eval`
+- &#10004; includes TypeScript types
+- &#10004; supports C style comments
+- &#10004; supports escaped new line in strings
+- &#10004; supports trailing commas
+- &#10004; supports circular and repeated references
+- &#10004; supports `undefined`
+- &#10004; supports `-0`, `NaN` and `Infinity`
+- &#10004; supports `BigInt`
+- &#10004; supports `Date`
+- &#10004; supports `Error` (with [exception](#the-error-exception))
+- &#10004; supports `Map`
+- &#10004; supports `RegExp`
+- &#10004; supports `Set`
+- &#10004; supports `TypedArray`s (but `Float16Array`)
+- &#10004; supports `URL`
+
+# Example
+
+<!-- prettier-ignore-start -->
+
+```javascript
+const set = new Set();
+const arr = [set];
+const obj = { arr, nan: NaN, set };
+
+arr.push(arr, obj);
+obj.obj = obj;
+set.add(arr).add(obj);
+
+const serialized = NJSON.stringify(obj);
+const parsed = NJSON.parse(serialized);
+
+console.log(parsed === parsed.obj);         // true
+console.log(parsed.arr === parsed.arr[1]);  // true
+console.log(isNaN(parsed.nan));             // true
+console.log(parsed.set instanceof Set);     // true
+console.log(parsed === [...parsed.set][1]); // true
+console.log(serialized);
+// ((A,B,C)=>Object.assign(B,{"arr":Object.assign(A,{"0":C.add(A).add(B),"1":A,"2":B}),"set":C,"obj":B}))([],{"nan":NaN},new Set())
+```
+
+<!-- prettier-ignore-end -->
+
+## Comparison with alternatives
+
+| Feature                  | JSON     | flatted  | devalue  | superjson | **NJSON** |
+| ------------------------ | -------- | -------- | -------- | --------- | --------- |
+| Safe: no `eval` use      | &#10004; | &#10004; | &#10004; | &#10004;  | &#10004;  |
+| `eval` compliant \*      | &#10004; | &#10060; | &#10060; | &#10060;  | &#10004;  |
+| Circular / repeated refs | &#10060; | &#10004; | &#10004; | &#10004;  | &#10004;  |
+| `Map` / `Set`            | &#10060; | &#10060; | &#10004; | &#10004;  | &#10004;  |
+| `BigInt`                 | &#10060; | &#10060; | &#10004; | &#10004;  | &#10004;  |
+| `Date`                   | &#10060; | &#10060; | &#10004; | &#10004;  | &#10004;  |
+| `RegExp`                 | &#10060; | &#10060; | &#10004; | &#10004;  | &#10004;  |
+| `TypedArray`s            | &#10060; | &#10060; | &#10004; | &#10060;  | &#10004;  |
+| Preserves `undefined`    | &#10060; | &#10060; | &#10004; | &#10004;  | &#10004;  |
+
+> \* This is the main reason why `NJSON` was born. The string produced by any other option strictly requires its own
+> parser to be converted back to the original value. As with `JSON`, the string produced by `NJSON` can be cut / pasted
+> in any JavaScript environment - without the need of any additional library - to reproduce the original value; a very
+> powerful feature while debugging / developing.
 
 ## NJSON extends JSON
 
@@ -133,20 +183,16 @@ the `Error` exception to the rule that an _NJSON encoded string_ produces exactl
 evaluated.
 
 - `cause`:
-
   - through `NJSON.parse` the result is **a not enumerable** property;
   - through `eval` the result may be **an enumerable** or **a not enumerable** property depending on the running
     JavaScript engine;
 
 - `stack`:
-
   - if absent:
-
     - through `NJSON.parse` the result is **a not enumerable** property with value a _pseudo-stack_;
     - through `eval` the result is the standard `stack` property for the running JavaScript engine;
 
   - if present:
-
     - through `NJSON.parse` the result is **a not enumerable** property;
     - through `eval` the result may be **an enumerable** or **a not enumerable** property depending on the running
       JavaScript engine;
@@ -181,23 +227,6 @@ import { NJSON, NjsonParseOptions, NjsonStringifyOptions } from "next-json";
 
 const serialized = NJSON.stringify({ some: "value" });
 const deserialized = NJSON.parse<{ some: string }>(serialized);
-```
-
-# Example
-
-```javascript
-const obj = { test: Infinity };
-const set = new Set();
-const arr = [NaN, obj, set];
-
-arr.push(arr);
-arr.push(obj);
-obj.arr = arr;
-set.add(obj);
-set.add(arr);
-
-console.log(NJSON.stringify(arr));
-// ((A,B)=>{B.push(Object.assign(A,{"arr":B}),new Set([A,B]),B,A);return B})({"test":Infinity},[NaN])
 ```
 
 # Polyfill
@@ -463,6 +492,29 @@ When a repeated reference is encountered, `replacer` and `reviver` are called ag
 called recursively against its properties. If a property of a repeated reference is changed, the same change has effect
 in all other occurrences of the same reference.<br />
 Circular references are simply special cases of repeated references.
+
+# Version 0.5.0
+
+`v0.5.0` changes the stringification of `Array`s from the use of `push` to the use `Object.assign` with some
+advantages:
+
+- enables the support of _sparse arrays_, next item in the TODO list;
+
+- enables the use of _body-less functions_ rather than _functions_ which makes the parser thinner;
+
+and one disadvantage:
+
+- breaks the compatibility with previous versions stringification.
+
+To make the change as smooth as possible, `v0.5.0` still supports the deserialization of previous versions
+stringification: support for parsing `push` will be removed in some later version TBD.
+
+> If `NJSON` is used to produce volatile values through `stringify` that are immediately parsed and discarded, no
+> actions are required.
+>
+> If some values stringified using `NJSON.version` < `v0.5.0` are stored (in some DBs or in some files), it is
+> recommended to convert them serialization to the newer format (just parse and re-stringify them using `v0.5.0` <=
+> `NJSON.version` < `TBD`).
 
 # Compatibility
 

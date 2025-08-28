@@ -1,0 +1,13 @@
+((A, B) => {
+  B.push(
+    [
+      A,
+      B
+    ],
+    A
+  );
+  return B
+})(
+  "long string",
+  []
+)

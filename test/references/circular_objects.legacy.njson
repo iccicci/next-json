@@ -1,5 +1,5 @@
-((A) =>
-  Object.assign(
+((A) => {
+  return Object.assign(
     A,
     {
       "object2": {
@@ -8,7 +8,7 @@
       }
     }
   )
-)(
+})(
   {
     "njson": "test"
   }

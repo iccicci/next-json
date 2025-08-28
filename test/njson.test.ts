@@ -165,7 +165,7 @@ describe("NJSON", () => {
         it("stack", () => expect(error.stack).toBe(stack));
       });
 
-    const fakeStack = (e: Error) => Object.defineProperty(e, "stack", { enumerable: false, value: `${e.stack?.split("\n")[0]  }\n    njson stack`, writable: true });
+    const fakeStack = (e: Error) => Object.defineProperty(e, "stack", { enumerable: false, value: `${e.stack?.split("\n")[0]}\n    njson stack`, writable: true });
     const cause = fakeStack(new Error("cause"));
     const setCause = (e: Error, value: unknown = cause) => Object.defineProperty(e, "cause", { enumerable: false, value, writable: true });
     const longMessage = "long njson message";
@@ -241,7 +241,7 @@ describe("NJSON", () => {
     check(
       "repeated with stack and repeated cause",
       [error1, error1, cause],
-      '((A,B)=>{return [Object.assign(A,{"cause":B,"stack":"SyntaxError: njson\\n    njson stack"}),A,B]})(new SyntaxError("njson"),Object.assign(new Error("cause"),{"stack":"Error: cause\\n    njson stack"}))',
+      '((A,B)=>[Object.assign(A,{"cause":B,"stack":"SyntaxError: njson\\n    njson stack"}),A,B])(new SyntaxError("njson"),Object.assign(new Error("cause"),{"stack":"Error: cause\\n    njson stack"}))',
       cause,
       "njson",
       "SyntaxError",
@@ -255,7 +255,7 @@ describe("NJSON", () => {
     check(
       "repeated without repeated properties",
       [error2, error2],
-      '((A)=>{return [A,A]})(Object.assign(new TypeError("njson"),{"cause":Object.assign(new Error("cause"),{"stack":"Error: cause\\n    njson stack"}),"stack":"TypeError: njson\\n    njson stack"}))',
+      '((A)=>[A,A])(Object.assign(new TypeError("njson"),{"cause":Object.assign(new Error("cause"),{"stack":"Error: cause\\n    njson stack"}),"stack":"TypeError: njson\\n    njson stack"}))',
       cause,
       "njson",
       "TypeError",
@@ -269,7 +269,7 @@ describe("NJSON", () => {
     check(
       "not repeated with repeated message",
       [error3, longMessage],
-      '((A)=>{return [new URIError(A),A]})("long njson message")',
+      '((A)=>[new URIError(A),A])("long njson message")',
       undefined,
       longMessage,
       "URIError",
@@ -281,7 +281,7 @@ describe("NJSON", () => {
     check(
       "repeated with repeated message",
       [error3, error3, longMessage],
-      '((A,B)=>{return [Object.assign(A,{"message":B}),A,B]})(new URIError(""),"long njson message")',
+      '((A,B)=>[Object.assign(A,{"message":B}),A,B])(new URIError(""),"long njson message")',
       undefined,
       longMessage,
       "URIError",
@@ -295,7 +295,7 @@ describe("NJSON", () => {
     check(
       "repeated with cause, name and repeated message",
       [error4, error4, longMessage],
-      '((A,B)=>{return [Object.assign(A,{"cause":new Error("cause"),"message":B,"name":"TestError"}),A,B]})(new Error(""),"long njson message")',
+      '((A,B)=>[Object.assign(A,{"cause":new Error("cause"),"message":B,"name":"TestError"}),A,B])(new Error(""),"long njson message")',
       cause,
       longMessage,
       "TestError",

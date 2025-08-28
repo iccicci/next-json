@@ -1,31 +1,33 @@
-((A, B, C, D) => {
-  C.push(
-    Object.assign(
-      A,
-      {
-        "array4": C,
-        "map4": B
-          .set(
-            "B",
-            A
-          )
-          .set(
+((A, B, C, D) =>
+  B
+    .set(
+      "B",
+      Object.assign(
+        A,
+        {
+          "array4": Object.assign(
             C,
-            D
-              .add(A)
-              .add(C)
-              .add(B)
+            {
+              "1": A,
+              "2": B,
+              "3": D
+                .add(A)
+                .add(C)
+                .add(B),
+              "4": C
+            }
           ),
-        "object5": A,
-        "set3": D
-      }
-    ),
-    B,
-    D,
-    C
-  );
-  return B
-})(
+          "map4": B,
+          "object5": A,
+          "set3": D
+        }
+      )
+    )
+    .set(
+      C,
+      D
+    )
+)(
   {
     "njson": "test"
   },

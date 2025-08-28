@@ -150,7 +150,7 @@ interface ReplacerRef {
   exclude?: boolean;
   found?: boolean;
   identifier?: string;
-  statement?: () => string;
+  main?: boolean;
   stringified?: string;
   stringify: (currIndent: string, body?: boolean, first?: boolean) => string;
 }
@@ -265,7 +265,6 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
   const letters: number[] = [];
   const references = new Map<unknown, ReplacerRef>();
   const indent = space;
-  const twoIndent = indent + indent;
 
   function getIdentifier() {
     const { length } = letters;
@@ -320,28 +319,40 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
 
         default:
           if(value instanceof Array) {
+            let args: ReplacerRef[] = [];
             const elements: ReplacerRef[] = [];
             let elems = elements;
+            let push = -1;
 
             for(const [i, _] of value.entries()) elements.push(replace(value, numberKey ? i : i.toString(), _, skipNext));
 
             function stringify(this: ReplacerRef, currIndent: string, body?: boolean, first?: boolean) {
-              if(this.identifier && body) return this.identifier;
+              if(this.already && this.identifier && body) return this.identifier;
 
               if(first) {
-                const push = elements.findIndex(_ => ! _.argument());
+                push = elements.findIndex(_ => ! _.argument());
 
                 if(push !== -1) {
                   elems = elements.slice(0, push);
-                  const args = elements.slice(push, elements.length);
-
-                  this.statement = function(this: ReplacerRef) {
-                    return `${indent}${this.identifier}.push(${newLine}${args.map(_ => twoIndent + _.stringify(twoIndent, true)).join(`,${newLine}`)}${newLine}${indent})`;
-                  };
+                  args = elements.slice(push, elements.length);
                 }
               }
 
               const nextIndent = currIndent + indent;
+
+              if(! this.already && this.identifier && body) {
+                this.already = true;
+
+                if(args.length) {
+                  const nextNextIndent = nextIndent + indent;
+
+                  return `Object.assign(${newLine}${nextIndent}${this.identifier},${newLine}${nextIndent}{${newLine}${args
+                    .map((_, i) => `${nextNextIndent}"${i + push}":${separator}${_.stringify(nextNextIndent, true)}`)
+                    .join(`,${newLine}`)}${newLine}${nextIndent}}${newLine}${currIndent})`;
+                }
+
+                return this.identifier;
+              }
 
               return elems.length ? `[${newLine}${elems.map(_ => nextIndent + _.stringify(nextIndent, body)).join(`,${newLine}`)}${newLine}${currIndent}]` : "[]";
             }
@@ -568,8 +579,12 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
                 return this.identifier;
               }
 
+              const wrapped = this.main && body;
+              const open = wrapped ? "(" : "";
+              const close = wrapped ? ")" : "";
+
               return elems.length
-                ? `{${newLine}${elems.map(_ => `${nextIndent}${JSON.stringify(_[0])}:${separator}${_[1].stringify(nextIndent, body)}`).join(`,${newLine}`)}${newLine}${currIndent}}`
+                ? `${open}{${newLine}${elems.map(_ => `${nextIndent}${JSON.stringify(_[0])}:${separator}${_[1].stringify(nextIndent, body)}`).join(`,${newLine}`)}${newLine}${currIndent}}${close}`
                 : "{}";
             }
 
@@ -608,6 +623,8 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
 
   if(replaced.exclude) return undefined;
 
+  replaced.main = true;
+
   const identifiers = Array.from(references.values())
     .filter(_ => _.identifier)
     .sort((a, b) => (a.identifier!.length < b.identifier!.length ? -1 : a.identifier!.length > b.identifier!.length ? 1 : a.identifier! < b.identifier! ? -1 : 1));
@@ -615,12 +632,9 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
   if(! identifiers.length) return replaced.stringify("");
 
   const args = identifiers.map(_ => _.stringify(indent, false, true));
-  const statements = identifiers.filter(_ => _.statement).map(_ => _.statement!());
-
-  statements.push(`${indent}return ${replaced.stringify(indent, true)}`);
 
   return (
-    `((${identifiers.map(_ => _.identifier).join(`,${separator}`)})${separator}=>${separator}{${newLine}${statements.join(`;${newLine}`)}${newLine}})` +
+    `((${identifiers.map(_ => _.identifier).join(`,${separator}`)})${separator}=>${newLine}${indent}${replaced.stringify(indent, true)}${newLine})` +
     `(${newLine}${indent}${args.join(`,${newLine}${indent}`)}${newLine})`
   );
 }

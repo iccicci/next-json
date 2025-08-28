@@ -1,5 +1,5 @@
-((A, B) =>
-  B
+((A, B) => {
+  return B
     .set(
       5,
       new Map([
@@ -45,7 +45,7 @@
       6,
       A
     )
-)(
+})(
   {
     "test": "njson"
   },

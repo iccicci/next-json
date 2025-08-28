@@ -1,17 +1,21 @@
-((A, B) => {
-  A.push(
-    B,
-    42
-  );
-  B.push(
-    A,
-    3
-  );
-  return {
-    "array1": A,
+((A, B) =>
+  ({
+    "array1": Object.assign(
+      A,
+      {
+        "1": Object.assign(
+          B,
+          {
+            "2": A,
+            "3": 3
+          }
+        ),
+        "2": 42
+      }
+    ),
     "array2": B
-  }
-})(
+  })
+)(
   [
     23
   ],

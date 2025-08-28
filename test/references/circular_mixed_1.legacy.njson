@@ -1,0 +1,44 @@
+((A, B, C, D) => {
+  B.push(
+    Object.assign(
+      A,
+      {
+        "array4": B,
+        "map4": C
+          .set(
+            "B",
+            A
+          )
+          .set(
+            B,
+            D
+              .add(A)
+              .add(B)
+              .add(C)
+          ),
+        "object5": A,
+        "set3": D
+      }
+    ),
+    C,
+    D,
+    B
+  );
+  return A
+})(
+  {
+    "njson": "test"
+  },
+  [
+    1
+  ],
+  new Map([
+    [
+      "A",
+      "njson"
+    ]
+  ]),
+  new Set([
+    "a"
+  ])
+)
