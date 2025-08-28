@@ -42,8 +42,13 @@
   "keywords": [
     "bigint",
     "buffer",
+    "circular",
+    "circular-reference",
+    "custom-json",
     "date",
+    "deserialize",
     "eval",
+    "extended-json",
     "infinity",
     "javascript",
     "json",
@@ -51,6 +56,9 @@
     "nan",
     "parse",
     "regexp",
+    "repeated",
+    "repeated-reference",
+    "serialize",
     "set",
     "stringify",
     "undefined"

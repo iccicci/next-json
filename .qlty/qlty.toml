@@ -1,0 +1,40 @@
+[engines.duplication]
+enabled = true
+languages = ["typescript"]
+
+[engines.eslint]
+enabled = true
+channel = "eslint-9"
+
+[engines.fixme]
+enabled = true
+
+[ratings]
+paths = ["*.ts", "test/*.ts"]
+
+[smells.boolean_logic]
+enabled = false
+
+[smells.complex_logic]
+enabled = false
+
+[smells.similar_code]
+enabled = false
+
+[smells.file_length]
+threshold = 1000
+
+[smells.file_complexity]
+threshold = 800
+
+[smells.function_complexity]
+threshold = 700
+
+[smells.function_parameters]
+threshold = 10
+
+[smells.nested_control_flow]
+threshold = 10
+
+[smells.return_statements]
+threshold = 40

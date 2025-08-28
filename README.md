@@ -48,29 +48,61 @@ JSON is awesome mainly for two reasons:
 
 ... but it has some limitations:
 
-- doesn't support `undefined` values,
-- doesn't support `BigInt` numbers,
-- doesn't support many other features...
+- &#10060; loses `undefined`, `NaN`, `Infinity`, `-0`
+- &#10060; throws `TypeError` serializing circular references
+- &#10060; cannot handle `BigInt`, `Date`, `Error`, `Map`, `RegExp`, `Set`, `URL`
+- &#10060; doesn't support many other features...
 
 This package is intended to offer something as great as JSON... trying to add something more.
 
 ## NJSON Features
 
-- &#9745; extends JSON
-- &#9745; supports C style comments
-- &#9745; supports escaped new line in strings
-- &#9745; supports trailing commas
-- &#9745; supports circular and repeated references
-- &#9745; supports `undefined`
-- &#9745; supports `-0`, `NaN` and `Infinity`
-- &#9745; supports `BigInt`
-- &#9745; supports `Date`
-- &#9745; supports `Error` (with [exception](#the-error-exception))
-- &#9745; supports `Map`
-- &#9745; supports `RegExp`
-- &#9745; supports `Set`
-- &#9745; supports `TypedArray`s (but `Float16Array`)
-- &#9745; supports `URL`
+- &#10004; extends JSON
+- &#10004; safe parser: doesn't use `eval`
+- &#10004; JavaScript compatible: same result from `parse` and `eval`
+- &#10004; includes TypeScript types
+- &#10004; supports C style comments
+- &#10004; supports escaped new line in strings
+- &#10004; supports trailing commas
+- &#10004; supports circular and repeated references
+- &#10004; supports `undefined`
+- &#10004; supports `-0`, `NaN` and `Infinity`
+- &#10004; supports `BigInt`
+- &#10004; supports `Date`
+- &#10004; supports `Error` (with [exception](#the-error-exception))
+- &#10004; supports `Map`
+- &#10004; supports `RegExp`
+- &#10004; supports `Set`
+- &#10004; supports `TypedArray`s (but `Float16Array`)
+- &#10004; supports `URL`
+
+# Example
+
+<!-- prettier-ignore-start -->
+
+```javascript
+const set = new Set();
+const arr = [set];
+const obj = { arr, nan: NaN, set };
+
+arr.push(arr);
+arr.push(obj);
+obj.obj = obj;
+set.add(arr);
+
+const serialized = NJSON.stringify(obj);
+const parsed = NJSON.parse(serialized);
+
+console.log(parsed === parsed.obj);        // true &#10004;
+console.log(parsed.arr === parsed.arr[1]); // true &#10004;
+console.log(isNaN(parsed.nan));            // true &#10004;
+console.log(parsed.set === parsed.arr[0]); // true &#10004;
+console.log(parsed.set instanceof Set);    // true &#10004;
+console.log(serialized);
+// ((A,B,C)=>{A.push(C.add(Object.assign(B,{"arr":A,"set":C,"obj":B})).add(A),A,B);return B})([],{"nan":NaN},new Set())
+```
+
+<!-- prettier-ignore-end -->
 
 ## NJSON extends JSON
 
@@ -181,23 +213,6 @@ import { NJSON, NjsonParseOptions, NjsonStringifyOptions } from "next-json";
 
 const serialized = NJSON.stringify({ some: "value" });
 const deserialized = NJSON.parse<{ some: string }>(serialized);
-```
-
-# Example
-
-```javascript
-const obj = { test: Infinity };
-const set = new Set();
-const arr = [NaN, obj, set];
-
-arr.push(arr);
-arr.push(obj);
-obj.arr = arr;
-set.add(obj);
-set.add(arr);
-
-console.log(NJSON.stringify(arr));
-// ((A,B)=>{B.push(Object.assign(A,{"arr":B}),new Set([A,B]),B,A);return B})({"test":Infinity},[NaN])
 ```
 
 # Polyfill
