@@ -39,12 +39,26 @@ export interface NjsonStringifyOptions {
   /** Adds indentation, white space, and line break characters to the return-value NJSON text to make it easier to read. */
   space?: number | string;
 
-  /** When a `string` is longer than `stringLength` character it is considered a reference. */
+  /** When a `string` is longer than `stringLength` characters it is considered a reference. */
   stringLength?: number;
 
   /** If `false`, `undefined` values ar skipped (as JSON.stringify does). */
   undef?: boolean;
 }
+
+class EmptyError extends Error {
+  constructor() {
+    super("");
+  }
+}
+
+/**
+ * A symbol used to indicate an empty value in an `Array`.
+ *
+ * If a `replacer` or a `reviver` function returns this symbol outside of an `Array` `context`,
+ * an `Error` is thrown.
+ */
+const empty = Symbol("empty");
 
 /**
  * Converts a Next JavaScript Object Notation (NJSON) string into an object.
@@ -67,20 +81,28 @@ function parse<T = unknown>(text: string, reviver?: NjsonFunction): T;
 
 function parse<T = unknown>(text: string, options?: NjsonParseOptions | NjsonFunction): T {
   try {
-    const result = parser(text, { grammarSource: "", offset: 0, ...(typeof options === "function" ? undefined : options) }) as unknown as T;
-
     if(typeof options === "function") options = { reviver: options };
     if(! options) options = {};
+
+    const result = parser(text, { grammarSource: "", offset: 0, ...options }) as unknown as T;
+
     if(typeof options.reviver !== "function") return result;
 
     const { numberKey, reviver } = options;
     const references: unknown[] = [];
 
-    function revive(context: unknown, key: number | string, value: unknown, skip?: boolean, skipNext?: boolean): unknown {
+    const revive = function(context: unknown, key: number | string, value: unknown, skip?: boolean, skipNext?: boolean): unknown {
       if(value && typeof value === "object" && ! (value instanceof Date) && ! (value instanceof RegExp) && ! (value instanceof URL) && ! ArrayBuffer.isView(value) && ! references.includes(value)) {
         references.push(value);
 
-        if(value instanceof Array) for(const [i, _] of value.entries()) value[i] = revive(value, numberKey ? i : i.toString(), _, skipNext);
+        if(Array.isArray(value))
+          for(const [i, _] of value.entries()) {
+            const revived = revive(value, numberKey ? i : i.toString(), _, skipNext);
+
+            // eslint-disable-next-line @typescript-eslint/no-array-delete
+            if(revived === empty) delete value[i];
+            else value[i] = revived;
+          }
         else if(value instanceof Error) {
           const revived = revive(value, "message", value.message);
 
@@ -96,7 +118,7 @@ function parse<T = unknown>(text: string, options?: NjsonParseOptions | NjsonFun
             let key: unknown;
             let val: unknown;
 
-            if(revived instanceof Array && revived.length === 2) {
+            if(Array.isArray(revived) && revived.length === 2) {
               [key, val] = revived as [unknown, unknown];
 
               if(key !== _[0]) remove = replace = true;
@@ -125,13 +147,28 @@ function parse<T = unknown>(text: string, options?: NjsonParseOptions | NjsonFun
         } else for(const [key, val] of Object.entries(value)) (value as Record<string, unknown>)[key] = revive(value, key, val);
       }
 
-      return skip ? value : reviver.call(context, key, value);
-    }
+      if(skip) return value;
+
+      value = reviver.call(context, key, value);
+
+      if(value === empty && ! Array.isArray(context)) throw new EmptyError();
+
+      return value;
+    };
 
     return revive({ "": result }, "", result) as T;
   } catch(e) {
     if(e instanceof NJSONError) {
       const err = new SyntaxError(e.format([]).substring(7).replace(".\n at :", " at "));
+      const [first, , ...rest] = err.stack!.split("\n");
+
+      Object.defineProperty(err, "stack", { value: [first, ...rest].join("\n") });
+
+      throw err;
+    }
+
+    if(e instanceof EmptyError) {
+      const err = new TypeError("NJSON.empty can be used only in an Array context");
       const [first, , ...rest] = err.stack!.split("\n");
 
       Object.defineProperty(err, "stack", { value: [first, ...rest].join("\n") });
@@ -147,44 +184,35 @@ interface ReplacerRef {
   already?: boolean;
   argument: () => boolean;
   elements?: unknown;
+  empty?: boolean;
   exclude?: boolean;
   found?: boolean;
   identifier?: string;
   main?: boolean;
   stringified?: string;
-  stringify: (currIndent: string, body?: boolean, first?: boolean) => string;
+  stringify: (currIndent: string, body?: boolean, arg?: boolean) => string;
 }
 
-function argument(this: ReplacerRef): boolean {
+const argument = function(this: ReplacerRef): boolean {
   if(this.identifier) return false;
   if((this.elements as ReplacerRef[]).some(_ => ! _.argument())) return false;
 
   return true;
-}
+};
 
-function excludeRef(): ReplacerRef {
-  function argument(): boolean {
-    return true;
-  }
+const excludeRef = () => ({ argument: () => true, exclude: true, stringify: () => "null" });
 
-  function stringify() {
-    return "null";
-  }
-
-  return { argument, exclude: true, stringify };
-}
-
-function nativeRef(stringified: string): ReplacerRef {
-  function argument(this: ReplacerRef): boolean {
+const nativeRef = function(stringified: string) {
+  const argument = function(this: ReplacerRef): boolean {
     return ! this.identifier;
-  }
+  };
 
-  function stringify(this: ReplacerRef, _: string, body?: boolean) {
+  const stringify = function(this: ReplacerRef, _: string, body?: boolean) {
     return this.identifier && body ? this.identifier : this.stringified!;
-  }
+  };
 
   return { argument, stringified, stringify };
-}
+};
 
 const errors = [EvalError, RangeError, ReferenceError, SyntaxError, TypeError, URIError];
 const typedArrays = [BigInt64Array, BigUint64Array, Float32Array, Float64Array, Int8Array, Int16Array, Int32Array, Uint8Array, Uint8ClampedArray, Uint16Array, Uint32Array];
@@ -220,8 +248,8 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
   if(options) {
     let arrayReplacer: (number | string)[] | undefined = undefined;
 
-    if(typeof options === "object") {
-      if(options instanceof Array) arrayReplacer = options;
+    if(typeof options === "object")
+      if(Array.isArray(options)) arrayReplacer = options;
       else {
         if(options.date === "iso") stringifyDate = value => `"${value.toISOString()}"`;
         else if(options.date === "string") stringifyDate = value => `"${value.toString()}"`;
@@ -234,18 +262,17 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
         if(options.undef === false) undef = false;
 
         if(typeof options.replacer === "function") replacer = options.replacer;
-        else if(options.replacer instanceof Array) arrayReplacer = options.replacer;
+        else if(Array.isArray(options.replacer)) arrayReplacer = options.replacer;
 
         space = options.space;
       }
-    }
 
     if(typeof options === "function") replacer = options;
     if(arrayReplacer) {
       const keys = ["", ...arrayReplacer.map(_ => (typeof _ === "number" && ! numberKey ? _.toString() : _)).filter(_ => typeof _ === "string" || (numberKey && typeof _ === "number"))];
 
       replacer = function(key, value) {
-        return this instanceof Array ? value : keys.includes(key) ? value : parse;
+        return Array.isArray(this) ? value : keys.includes(key) ? value : parse;
       };
     }
   }
@@ -256,7 +283,7 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
 
       for(let i = 1; i <= 10 && i <= space; ++i) spc += " ";
       space = spc;
-    } else if(typeof space === "string") space = space.replace(/[^ \n\r\t]/g, "").substring(0, 10);
+    } else space = space.replace(/[^ \n\r\t]/g, "").substring(0, 10);
 
     newLine = "\n";
     separator = " ";
@@ -266,26 +293,25 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
   const references = new Map<unknown, ReplacerRef>();
   const indent = space;
 
-  function getIdentifier() {
+  const getIdentifier = function() {
     const { length } = letters;
 
-    for(let i = 0; i <= length; ++i) {
+    for(let i = 0; i <= length; ++i)
       if(i === length) for(let l = 0; l <= length; ++l) letters[l] = 0;
       else if(letters[i] === 25) letters[i] = 0;
       else {
         letters[i]++;
         break;
       }
-    }
 
     return String.fromCharCode(...letters.map(_ => _ + 65).reverse());
-  }
+  };
 
-  function isReference(value: unknown) {
+  const isReference = function(value: unknown) {
     switch(typeof value) {
     case "function":
     case "symbol":
-      return true;
+      return value !== empty;
     case "object":
       return value;
     case "string":
@@ -293,11 +319,12 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
     }
 
     return false;
-  }
+  };
 
-  function replace(context: unknown, key: number | string, value: unknown, skip?: boolean, skipNext?: boolean): ReplacerRef {
+  const replace = function(context: unknown, key: number | string, value: unknown, skip?: boolean, skipNext?: boolean): ReplacerRef {
     if(replacer && ! skip) value = replacer.call(context, key, value);
-    if(skipNext && (! (value instanceof Array) || value.length !== 2)) return { exclude: true } as ReplacerRef;
+    if(value === empty && ! Array.isArray(context)) throw new EmptyError();
+    if(skipNext && (! Array.isArray(value) || value.length !== 2)) return { exclude: true } as ReplacerRef;
 
     if(isReference(value)) {
       let ref = references.get(value);
@@ -318,49 +345,6 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
           break;
 
         default:
-          if(value instanceof Array) {
-            let args: ReplacerRef[] = [];
-            const elements: ReplacerRef[] = [];
-            let elems = elements;
-            let push = -1;
-
-            for(const [i, _] of value.entries()) elements.push(replace(value, numberKey ? i : i.toString(), _, skipNext));
-
-            function stringify(this: ReplacerRef, currIndent: string, body?: boolean, first?: boolean) {
-              if(this.already && this.identifier && body) return this.identifier;
-
-              if(first) {
-                push = elements.findIndex(_ => ! _.argument());
-
-                if(push !== -1) {
-                  elems = elements.slice(0, push);
-                  args = elements.slice(push, elements.length);
-                }
-              }
-
-              const nextIndent = currIndent + indent;
-
-              if(! this.already && this.identifier && body) {
-                this.already = true;
-
-                if(args.length) {
-                  const nextNextIndent = nextIndent + indent;
-
-                  return `Object.assign(${newLine}${nextIndent}${this.identifier},${newLine}${nextIndent}{${newLine}${args
-                    .map((_, i) => `${nextNextIndent}"${i + push}":${separator}${_.stringify(nextNextIndent, true)}`)
-                    .join(`,${newLine}`)}${newLine}${nextIndent}}${newLine}${currIndent})`;
-                }
-
-                return this.identifier;
-              }
-
-              return elems.length ? `[${newLine}${elems.map(_ => nextIndent + _.stringify(nextIndent, body)).join(`,${newLine}`)}${newLine}${currIndent}]` : "[]";
-            }
-
-            rest = { argument, elements, stringify };
-            break;
-          }
-
           if(value instanceof Date) {
             rest = nativeRef(isNaN(value.getTime()) ? "new Date(NaN)" : `new Date(${stringifyDate(value)})`);
             break;
@@ -377,10 +361,10 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
               if(! replaced.exclude) elements.push(replaced);
             }
 
-            function stringify(this: ReplacerRef, currIndent: string, body?: boolean, first?: boolean) {
+            const stringify = function(this: ReplacerRef, currIndent: string, body?: boolean, arg?: boolean) {
               if(this.already && this.identifier && body) return this.identifier;
 
-              if(first) {
+              if(arg) {
                 const set = elements.findIndex(_ => ! _.argument());
 
                 if(set !== -1) {
@@ -406,7 +390,7 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
               }
 
               return elems.length ? `new Map([${newLine}${elems.map(_ => nextIndent + _.stringify(nextIndent, body)).join(`,${newLine}`)}${newLine}${currIndent}])` : "new Map()";
-            }
+            };
 
             rest = { argument, elements, stringify };
             break;
@@ -426,10 +410,10 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
 
             for(const [i, _] of Array.from(value).entries()) elements.push(replace(value, i, _));
 
-            function stringify(this: ReplacerRef, currIndent: string, body?: boolean, first?: boolean) {
+            const stringify = function(this: ReplacerRef, currIndent: string, body?: boolean, arg?: boolean) {
               if(this.already && this.identifier && body) return this.identifier;
 
-              if(first) {
+              if(arg) {
                 const add = elements.findIndex(_ => ! _.argument());
 
                 if(add !== -1) {
@@ -447,7 +431,7 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
               }
 
               return elems.length ? `new Set([${newLine}${elems.map(_ => nextIndent + _.stringify(nextIndent, body)).join(`,${newLine}`)}${newLine}${currIndent}])` : "new Set()";
-            }
+            };
 
             rest = { argument, elements, stringify };
             break;
@@ -476,16 +460,98 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
             const elements: [string, ReplacerRef][] = [];
             let elems = elements;
 
-            const entries = Object.entries(value as object);
-
-            if(sortKeys) entries.sort((a, b) => (a[0] < b[0] ? -1 : 1));
-
-            function argument(this: ReplacerRef): boolean {
+            const argument = function(this: ReplacerRef): boolean {
               if(this.identifier) return false;
               if((this.elements as [string, ReplacerRef][]).some(_ => ! _[1].argument())) return false;
 
               return true;
+            };
+
+            const baseStringify = function(this: ReplacerRef, currIndent: string, body?: boolean, arg?: boolean) {
+              if(this.already && this.identifier && body) return this.identifier;
+
+              if(arg) {
+                elems = [];
+
+                for(const _ of elements) (_[1].argument() ? elems : args).push(_);
+              }
+
+              if(! this.already && this.identifier && body) {
+                this.already = true;
+
+                if(args.length) {
+                  const nextIndent = currIndent + indent;
+                  const nextNextIndent = nextIndent + indent;
+
+                  return `Object.assign(${newLine}${nextIndent}${this.identifier},${newLine}${nextIndent}{${newLine}${args
+                    .map(_ => `${nextNextIndent}${JSON.stringify(_[0])}:${separator}${_[1].stringify(nextNextIndent, true)}`)
+                    .join(`,${newLine}`)}${newLine}${nextIndent}}${newLine}${currIndent})`;
+                }
+
+                return this.identifier;
+              }
+
+              return false;
+            };
+
+            if(Array.isArray(value)) {
+              for(const [i, _] of value.entries()) {
+                const key = i.toString();
+
+                elements.push([key, replace(value, numberKey ? i : key, Object.hasOwn(value, key) ? _ : empty, skipNext)]);
+              }
+
+              const stringify = function(this: ReplacerRef, currIndent: string, body?: boolean, arg?: boolean) {
+                const base = baseStringify.call(this, currIndent, body, arg);
+
+                if(base) return base;
+
+                let assign = false;
+                const nextIndent = currIndent + indent;
+                let idx = 0;
+                const stringified = elements.map((_, i) => {
+                  if(elems.length > idx && elems[idx][0] === i.toString()) {
+                    idx++;
+
+                    return nextIndent + _[1].stringify(nextIndent, body);
+                  }
+
+                  return nextIndent;
+                });
+
+                if(args.length) {
+                  let ignore: boolean;
+                  let irrelevant: boolean;
+                  let i = elements.length - 1;
+                  let l = args.length - 1;
+
+                  do {
+                    ignore = false;
+                    irrelevant = false;
+
+                    if(i >= 0)
+                      if(l >= 0 && elements[i][0] === args[l][0]) ignore = true;
+                      else if(assign && elements[i][1].empty) irrelevant = true;
+
+                    if(ignore || irrelevant) {
+                      stringified.pop();
+                      assign = true;
+                      i--;
+                      if(ignore) l--;
+                    }
+                  } while(ignore || irrelevant);
+                }
+
+                return elems.length ? `[${newLine}${stringified.join(`,${newLine}`)}${elems.length && elems[elems.length - 1][1].empty && ! assign ? "," : ""}${newLine}${currIndent}]` : "[]";
+              };
+
+              rest = { argument, elements, stringify };
+              break;
             }
+
+            const entries = Object.entries(value as object);
+
+            if(sortKeys) entries.sort((a, b) => (a[0] < b[0] ? -1 : 1));
 
             if(value instanceof Error) {
               const id = errors.findIndex(_ => value instanceof _);
@@ -500,18 +566,17 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
               if(name && ! name.exclude) elements.push(["name", name]);
               if(stack && ! stack.exclude) elements.push(["stack", stack]);
 
-              for(const [key, val] of entries) {
+              for(const [key, val] of entries)
                 if(! ["cause", "message", "name", "stack"].includes(key)) {
                   const replaced = replace(value, key, val);
 
                   if(! replaced.exclude) elements.push([key, replaced]);
                 }
-              }
 
-              function stringify(this: ReplacerRef, currIndent: string, body?: boolean, first?: boolean) {
+              const stringify = function(this: ReplacerRef, currIndent: string, body?: boolean, arg?: boolean) {
                 if(this.already && this.identifier && body) return this.identifier;
 
-                if(first) {
+                if(arg) {
                   const notArgument = message && ! message.argument();
 
                   anyway = elements.findIndex(_ => ! _[1].argument()) !== -1 || notArgument;
@@ -528,7 +593,7 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
                 const nextIndent = currIndent + indent;
                 const nextNextIndent = nextIndent + indent;
 
-                const construct = (indent: string) => `new ${error.name}(${! message || message.exclude || (first && ! message.argument()) ? '""' : message.stringify(indent, body)})`;
+                const construct = (indent: string) => `new ${error.name}(${! message || message.exclude || (arg && ! message.argument()) ? '""' : message.stringify(indent, body)})`;
 
                 const assign = () =>
                   `Object.assign(${newLine}${nextIndent}${this.identifier && body ? this.identifier : construct(nextNextIndent)},${newLine}${nextIndent}{${newLine}${elements
@@ -542,7 +607,7 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
                 }
 
                 return elements.length === 0 || anyway ? construct(nextIndent) : assign();
-              }
+              };
 
               rest = { argument, elements, stringify };
               break;
@@ -554,39 +619,20 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
               if(! replaced.exclude) elements.push([key, replaced]);
             }
 
-            function stringify(this: ReplacerRef, currIndent: string, body?: boolean, first?: boolean) {
-              if(this.already && this.identifier && body) return this.identifier;
+            const stringify = function(this: ReplacerRef, currIndent: string, body?: boolean, arg?: boolean) {
+              const base = baseStringify.call(this, currIndent, body, arg);
 
-              if(first) {
-                elems = [];
-
-                for(const _ of elements) (_[1].argument() ? elems : args).push(_);
-              }
-
-              const nextIndent = currIndent + indent;
-
-              if(! this.already && this.identifier && body) {
-                this.already = true;
-
-                if(args.length) {
-                  const nextNextIndent = nextIndent + indent;
-
-                  return `Object.assign(${newLine}${nextIndent}${this.identifier},${newLine}${nextIndent}{${newLine}${args
-                    .map(_ => `${nextNextIndent}${JSON.stringify(_[0])}:${separator}${_[1].stringify(nextNextIndent, true)}`)
-                    .join(`,${newLine}`)}${newLine}${nextIndent}}${newLine}${currIndent})`;
-                }
-
-                return this.identifier;
-              }
+              if(base) return base;
 
               const wrapped = this.main && body;
               const open = wrapped ? "(" : "";
               const close = wrapped ? ")" : "";
+              const nextIndent = currIndent + indent;
 
               return elems.length
                 ? `${open}{${newLine}${elems.map(_ => `${nextIndent}${JSON.stringify(_[0])}:${separator}${_[1].stringify(nextIndent, body)}`).join(`,${newLine}`)}${newLine}${currIndent}}${close}`
                 : "{}";
-            }
+            };
 
             rest = { argument, elements, stringify };
           }
@@ -612,14 +658,29 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
       return nativeRef("null");
     case "string":
       return nativeRef(JSON.stringify(value));
+    case "symbol":
+      return { argument: () => true, empty: true, stringify: () => "" };
     case "undefined":
       if(undef) return nativeRef("undefined");
     }
 
     return excludeRef();
-  }
+  };
 
-  const replaced = replace({ "": value }, "", value);
+  let replaced: ReplacerRef;
+
+  try {
+    replaced = replace({ "": value }, "", value);
+  } catch(e) {
+    if(e instanceof EmptyError) {
+      const err = new TypeError("NJSON.empty can be used only in an Array context");
+      const [first, , ...rest] = err.stack!.split("\n");
+      Object.defineProperty(err, "stack", { value: [first, ...rest].join("\n") });
+      throw err;
+    }
+
+    throw e;
+  }
 
   if(replaced.exclude) return undefined;
 
@@ -640,7 +701,7 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
 }
 
 /** Next JavaScript Object Notation. */
-export const NJSON = { parse, stringify } as const;
+export const NJSON = { empty, parse, stringify } as const;
 
 declare global {
   namespace Express {
@@ -684,7 +745,7 @@ export interface ExpressNjsonOptions {
  *
  * @param options A `ExpressNjsonOptions` specifying the options to be used while serializing and parsing bodies.
  */
-export function expressNJSON(options: ExpressNjsonOptions = {}) {
+export const expressNJSON = function(options: ExpressNjsonOptions = {}) {
   const { parse, stringify } = options;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -712,19 +773,20 @@ export function expressNJSON(options: ExpressNjsonOptions = {}) {
       }
     });
   };
-}
+};
 
 /**
  * Installs the `Response.njson` method.
  *
  * @param options The default `NjsonParseOptions` specifying the body parsing options.
  */
-export function fetchNJSON(options?: NjsonParseOptions) {
+export const fetchNJSON = function(options?: NjsonParseOptions) {
   const _options = options;
 
-  if(Response?.prototype) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+  Response?.prototype &&
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (Response.prototype as any).njson = async function njson(this: Response, options?: NjsonParseOptions) {
+    ((Response.prototype as any).njson = async function njson(this: Response, options?: NjsonParseOptions) {
       try {
         return NJSON.parse(await this.text(), options || _options);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -735,6 +797,5 @@ export function fetchNJSON(options?: NjsonParseOptions) {
         Object.defineProperty(error, "stack", { configurable: true, enumerable: false, value: [first, ...rest].join("\n") });
         throw error;
       }
-    };
-  }
-}
+    });
+};

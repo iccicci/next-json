@@ -1,10 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-invalid-void-type */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import express from "express";
 import { Server } from "http";
 
 import { expressNJSON, fetchNJSON, NJSON, NjsonParseOptions } from "../index";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const njsonPayload: any[] = ["test"];
 njsonPayload.push(njsonPayload);
 
@@ -25,19 +26,20 @@ describe("polyfill", () => {
 
     const jsonPayload = { test: 23 };
 
-    beforeAll(done => {
-      app.use(expressNJSON());
+    beforeAll(
+      () =>
+        new Promise<void>(resolve => {
+          app.use(expressNJSON());
 
-      app.all("/json", (_, res) => res.json(jsonPayload) as unknown as void);
-      app.all("/njson", (_, res) => res.njson(njsonPayload) as unknown as void);
-      app.all("/text", (_, res) => res.set({ "Content-Type": "text/plain" }).end("text") as unknown as void);
+          app.all("/json", (_, res) => res.json(jsonPayload) as unknown as void);
+          app.all("/njson", (_, res) => res.njson(njsonPayload) as unknown as void);
+          app.all("/text", (_, res) => res.set({ "Content-Type": "text/plain" }).end("text") as unknown as void);
 
-      server = app.listen(2323, done);
-    });
+          server = app.listen(2323, resolve);
+        })
+    );
 
-    afterAll(done => {
-      server.close(done);
-    });
+    afterAll(() => new Promise<void>((resolve, reject) => server.close(err => (err ? reject(err) : resolve()))));
 
     it("as Request.json try to parse regardless from content-type", async () => {
       const res = async () => await fetch("http://localhost:2323/text");
@@ -53,9 +55,7 @@ describe("polyfill", () => {
 
       try {
         await res.njson();
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch(error: any) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         expect(error.stack).not.toMatch("next-json/index");
       }
     });
@@ -86,26 +86,26 @@ describe("polyfill", () => {
     const app = express();
     let server: Server;
 
-    beforeAll(done => {
-      app.use((req, _, next) => {
-        if(req.headers["content-type"] === "test") {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-          (req as any)._body = true;
-          req.body = "test";
-        }
-        next();
-      });
+    beforeAll(
+      () =>
+        new Promise<void>(resolve => {
+          app.use((req, _, next) => {
+            if(req.headers["content-type"] === "test") {
+              (req as any)._body = true;
+              req.body = "test";
+            }
+            next();
+          });
 
-      app.use(expressNJSON({ parse: options }));
+          app.use(expressNJSON({ parse: options }));
 
-      app.all("/mirror", (req, res) => res.njson(req.body) as unknown as void);
+          app.all("/mirror", (req, res) => res.njson(req.body) as unknown as void);
 
-      server = app.listen(2324, done);
-    });
+          server = app.listen(2324, resolve);
+        })
+    );
 
-    afterAll(done => {
-      server.close(done);
-    });
+    afterAll(() => new Promise<void>((resolve, reject) => server.close(err => (err ? reject(err) : resolve()))));
 
     it("doesn't parse an already parsed body", async () => {
       const res = await fetch("http://localhost:2324/mirror", {
@@ -159,18 +159,19 @@ describe("polyfill", () => {
     const payload = { date: new Date("1976-01-23 15:00:00 GMT+0100") };
     let server: Server;
 
-    beforeAll(done => {
-      app.use(expressNJSON({ stringify: { date: "utc" } }));
+    beforeAll(
+      () =>
+        new Promise<void>(resolve => {
+          app.use(expressNJSON({ stringify: { date: "utc" } }));
 
-      app.all("/default", (_, res) => res.njson(payload) as unknown as void);
-      app.all("/override", (_, res) => res.njson(payload, {}) as unknown as void);
+          app.all("/default", (_, res) => res.njson(payload) as unknown as void);
+          app.all("/override", (_, res) => res.njson(payload, {}) as unknown as void);
 
-      server = app.listen(2325, done);
-    });
+          server = app.listen(2325, resolve);
+        })
+    );
 
-    afterAll(done => {
-      server.close(done);
-    });
+    afterAll(() => new Promise<void>((resolve, reject) => server.close(err => (err ? reject(err) : resolve()))));
 
     it("serializes the body using the default options", async () => {
       const res = await fetch("http://localhost:2325/default");

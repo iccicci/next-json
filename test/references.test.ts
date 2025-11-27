@@ -16,9 +16,7 @@ interface RefTest {
   value: unknown;
 }
 
-function noop(_: number | string, value: unknown) {
-  return value;
-}
+const noop = (_: number | string, value: unknown) => value;
 
 // circular objects
 const object1: Record<string, unknown> = { njson: "test" };
@@ -48,20 +46,20 @@ const object3 = { array1, array2 };
 array1[1] = array2;
 
 const circular_arrays = {
-  evaluated: '((A,B)=>({"array1":Object.assign(A,{"1":Object.assign(B,{"2":A,"3":3}),"2":42}),"array2":B}))([23],[1,2])',
+  evaluated: '((A,B)=>({"array1":Object.assign(A,{"1":Object.assign(B,{"2":A})}),"array2":B}))([23,,42],[1,2,,3])',
   replacer:  {
     calls:
-      '((A,B)=>[["",{"array1":Object.assign(A,{"1":Object.assign(B,{"2":A,"3":3}),"2":42}),"array2":B}],["array1",A],["0",23],["1",B],["0",1],["1",2],["2",A],["3",3],["2",42],["array2",B]])([23],[1,2])',
-    contexts: '((A,B,C)=>[{"":Object.assign(C,{"array1":Object.assign(A,{"1":Object.assign(B,{"2":A,"3":3}),"2":42}),"array2":B})},C,A,A,B,B,B,B,A,C])([23],[1,2],{})',
+      '((A,B)=>[["",{"array1":Object.assign(A,{"1":Object.assign(B,{"2":A})}),"array2":B}],["array1",A],["0",23],["1",B],["0",1],["1",2],["2",A],["3",3],["2",42],["array2",B]])([23,,42],[1,2,,3])',
+    contexts: '((A,B,C)=>[{"":Object.assign(C,{"array1":Object.assign(A,{"1":Object.assign(B,{"2":A})}),"array2":B})},C,A,A,B,B,B,B,A,C])([23,,42],[1,2,,3],{})',
     func:     noop
   },
   reviver: {
     calls:
-      '((A,B)=>[["0",23],["0",1],["1",2],["2",Object.assign(A,{"1":Object.assign(B,{"2":A,"3":3}),"2":42})],["3",3],["1",B],["2",42],["array1",A],["array2",B],["",{"array1":A,"array2":B}]])([23],[1,2])',
-    contexts: '((A,B,C)=>[Object.assign(A,{"1":Object.assign(B,{"2":A,"3":3}),"2":42}),B,B,B,B,A,A,Object.assign(C,{"array1":A,"array2":B}),C,{"":C}])([23],[1,2],{})',
+      '((A,B)=>[["0",23],["0",1],["1",2],["2",Object.assign(A,{"1":Object.assign(B,{"2":A})})],["3",3],["1",B],["2",42],["array1",A],["array2",B],["",{"array1":A,"array2":B}]])([23,,42],[1,2,,3])',
+    contexts: '((A,B,C)=>[Object.assign(A,{"1":Object.assign(B,{"2":A})}),B,B,B,B,A,A,Object.assign(C,{"array1":A,"array2":B}),C,{"":C}])([23,,42],[1,2,,3],{})',
     func:     noop
   },
-  stringified: '((A,B)=>({"array1":Object.assign(A,{"1":Object.assign(B,{"2":A,"3":3}),"2":42}),"array2":B}))([23],[1,2])',
+  stringified: '((A,B)=>({"array1":Object.assign(A,{"1":Object.assign(B,{"2":A})}),"array2":B}))([23,,42],[1,2,,3])',
   value:       object3
 };
 
@@ -267,7 +265,7 @@ const array8 = [23, 42];
 const array9 = [1, 2, 3];
 const array10 = [object6, 1, 2, object7, array8, 5, 6, array9];
 const replacer1 = function(this: unknown, key: number | string, value: unknown): unknown {
-  if(this instanceof Array && this.length === 8) {
+  if(Array.isArray(this) && this.length === 8) {
     if(key === "0") return 0;
     if(key === "1") return object6;
     if(key === "2") return object7;
@@ -278,7 +276,7 @@ const replacer1 = function(this: unknown, key: number | string, value: unknown):
   return value;
 };
 const reviver1 = function(this: unknown, key: number | string, value: unknown): unknown {
-  if(this instanceof Array && this.length === 8) {
+  if(Array.isArray(this) && this.length === 8) {
     if(key === "0") return this[1];
     if(key === "3") return this[2];
   }
@@ -290,7 +288,7 @@ const repeated_references_created = {
   replacer:  {
     calls:
       '((A,B,C,D)=>[["",[A,1,2,B,C,5,6,D]],["0",A],["1",1],["test","njson"],["2",2],["njson","test"],["3",B],["4",C],["0",23],["1",42],["5",5],["6",6],["0",1],["1",2],["2",3],["7",D]])({"test":"njson"},{"njson":"test"},[23,42],[1,2,3])',
-    contexts: '((A,B,C,D,E)=>[{"":Object.assign(A,{"0":B,"1":1,"2":2,"3":C,"4":D,"5":5,"6":6,"7":E})},A,A,B,A,C,A,A,D,D,A,A,E,E,E,A])([],{"test":"njson"},{"njson":"test"},[23,42],[1,2,3])',
+    contexts: '((A,B,C,D,E)=>[{"":Object.assign(A,{"0":B,"3":C,"4":D,"7":E})},A,A,B,A,C,A,A,D,D,A,A,E,E,E,A])([,1,2,,,5,6],{"test":"njson"},{"njson":"test"},[23,42],[1,2,3])',
     func:     replacer1
   },
   reviver: {
@@ -306,14 +304,14 @@ const repeated_references_created = {
 // repeated references removed
 const array11 = [object6, object6, object7, object7, array8, array8, array9, array9];
 const replacer2 = function(this: unknown, key: number | string, value: unknown): unknown {
-  if(this instanceof Array && this.length === 8) {
+  if(Array.isArray(this) && this.length === 8) {
     if(key === "0") return 0;
     if(key === "3") return 3;
   }
   return value;
 };
 const reviver2 = function(this: unknown, key: number | string, value: unknown): unknown {
-  if(this instanceof Array && this.length === 8) {
+  if(Array.isArray(this) && this.length === 8) {
     if(key === "4") return 4;
     if(key === "7") return 7;
   }
@@ -331,7 +329,7 @@ const repeated_references_removed = {
   reviver: {
     calls:
       '((A,B,C,D)=>[["0",0],["test","njson"],["1",C],["njson","test"],["2",D],["3",3],["0",23],["1",42],["4",A],["5",A],["0",1],["1",2],["2",3],["6",B],["7",B],["",[0,C,D,3,4,A,B,7]]])([23,42],[1,2,3],{"test":"njson"},{"njson":"test"})',
-    contexts: '((A,B,C,D,E)=>[Object.assign(B,{"1":A,"2":C,"3":3,"4":4,"5":D,"6":E,"7":7}),A,B,C,B,B,D,D,B,B,E,E,E,B,B,{"":B}])({"test":"njson"},[0],{"njson":"test"},[23,42],[1,2,3])',
+    contexts: '((A,B,C,D,E)=>[Object.assign(B,{"1":A,"2":C,"5":D,"6":E}),A,B,C,B,B,D,D,B,B,E,E,E,B,B,{"":B}])({"test":"njson"},[0,,,3,4,,,7],{"njson":"test"},[23,42],[1,2,3])',
     func:     reviver2
   },
   stringified: '[0,{"test":"njson"},{"njson":"test"},3,4,[23,42],[1,2,3],7]',
@@ -352,21 +350,22 @@ const tests: Record<string, RefTest> = {
   repeated_references_removed
 };
 
-function check(name: string, value: unknown, stringified: string) {
+const check = function(name: string, value: unknown, stringified: string) {
   describe(name, () => {
     it("to be", () => expect(NJSON.stringify(value, { stringLength: 10 })).toBe(stringified));
     it("evaluated", () => expect(NJSON.stringify(eval(`(${stringified})`), { stringLength: 10 })).toBe(stringified));
   });
-}
+};
 
 describe("references", () => {
-  for(const [name, test] of Object.entries(tests)) {
+  for(const [name, test] of Object.entries(tests))
     describe(name.replace(/_/g, " "), () => {
       const expected = readFileSync(`./test/references/${name}.njson`).toString().replace(/\n$/, "");
       const legacy = readFileSync(`./test/references/${name}.legacy.njson`).toString();
-      const replacer = jest.fn(test.replacer.func);
-      const reviver = jest.fn(test.reviver.func);
+      const replacer = vi.fn(test.replacer.func);
+      const reviver = vi.fn(test.reviver.func);
       const options = { replacer, space: 2, stringLength: 10 };
+
       const stringified = NJSON.stringify(test.value, options);
 
       it("stringified", () => expect(stringified).toBe(expected));
@@ -387,7 +386,6 @@ describe("references", () => {
 
       if(test.replacer.func === noop) it("legacy", () => expect(NJSON.stringify(NJSON.parse(legacy), options)).toBe(stringified));
     });
-  }
 
   it("identifiers", () => {
     const b: unknown[] = [];

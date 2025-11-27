@@ -35,9 +35,9 @@ describe("options", () => {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         return key === "0" && this.length === 3 ? null : key === "false" ? false : value;
       };
-      const jsonReviver = jest.fn(reviver);
-      const njsonReviver1 = jest.fn(reviver);
-      const njsonReviver2 = jest.fn(reviver);
+      const jsonReviver = vi.fn(reviver);
+      const njsonReviver1 = vi.fn(reviver);
+      const njsonReviver2 = vi.fn(reviver);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const jsonResult = JSON.parse(value, jsonReviver);
       const njsonResult1 = NJSON.parse(value, njsonReviver1);
@@ -128,9 +128,9 @@ describe("options", () => {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         return key === "0" && this.length === 3 ? "null" : key === "false" ? true : value;
       };
-      const jsonReplacer = jest.fn(replacer);
-      const njsonReplacer1 = jest.fn(replacer);
-      const njsonReplacer2 = jest.fn(replacer);
+      const jsonReplacer = vi.fn(replacer);
+      const njsonReplacer1 = vi.fn(replacer);
+      const njsonReplacer2 = vi.fn(replacer);
       const jsonResult = JSON.stringify(spaceValue, jsonReplacer);
       const njsonResult1 = NJSON.stringify(spaceValue, njsonReplacer1);
       const njsonResult2 = NJSON.stringify(spaceValue, { replacer: njsonReplacer2 });

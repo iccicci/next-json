@@ -1,5 +1,6 @@
 import js from "@eslint/js";
 import stylistic from "@stylistic/eslint-plugin";
+import { defineConfig } from "eslint/config";
 import _import from "eslint-plugin-import";
 import simpleImportSort from "eslint-plugin-simple-import-sort";
 import sortKeys from "eslint-plugin-sort-keys";
@@ -9,7 +10,7 @@ import tsEslint from "typescript-eslint";
 const overrides = { for: { after: false }, if: { after: false }, switch: { after: false }, while: { after: false } };
 const unusedVarsOptions = { argsIgnorePattern: "^_", caughtErrors: "none", ignoreRestSiblings: true };
 
-export default tsEslint.config(
+export default defineConfig(
   { ignores: ["coverage", "dist", "parser.ts"] },
   {
     extends:         [js.configs.recommended, ...tsEslint.configs.strictTypeChecked, ...tsEslint.configs.recommendedTypeChecked, ...tsEslint.configs.stylisticTypeChecked],
@@ -19,6 +20,7 @@ export default tsEslint.config(
       globals:       globals.browser,
       parserOptions: {
         projectService:  { allowDefaultProject: ["eslint.config.mjs", "jest.config.cjs"], defaultProject: "tsconfig.json" },
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         tsconfigRootDir: import.meta.dirname
       }
     },
@@ -43,8 +45,9 @@ export default tsEslint.config(
       "arrow-parens":                                              ["error", "as-needed"],
       "arrow-spacing":                                             "error",
       "brace-style":                                               ["error", "1tbs", { allowSingleLine: true }],
-      curly:                                                       ["error", "multi-or-nest"],
+      curly:                                                       ["error", "multi"],
       eqeqeq:                                                      ["error"],
+      "func-style":                                                ["error", "expression"],
       "import/first":                                              "error",
       "import/newline-after-import":                               "error",
       "import/no-duplicates":                                      "error",
@@ -54,6 +57,7 @@ export default tsEslint.config(
       "max-len":                                                   ["error", { code: 200, ignoreStrings: true }],
       "no-console":                                                "warn",
       "no-mixed-spaces-and-tabs":                                  ["error", "smart-tabs"],
+      "no-sparse-arrays":                                          "off",
       "prefer-const":                                              ["error", { destructuring: "all" }],
       "prefer-template":                                           "error",
       quotes:                                                      ["error", "double", { avoidEscape: true }],

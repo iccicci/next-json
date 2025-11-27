@@ -44,7 +44,8 @@ Because JSON is awesome, but...
 JSON is awesome mainly for two reasons:
 
 1. it offers an easy way to serialize and deserialize complex data;
-2. a valid JSON encoded string can be pasted in a JavaScript source file, a really awesome feature while developing / debugging.
+2. a valid JSON encoded string can be pasted in a JavaScript source file, a really awesome feature while developing /
+   debugging.
 
 ... but it has some limitations:
 
@@ -54,6 +55,10 @@ JSON is awesome mainly for two reasons:
 - &#10060; doesn't support many other features...
 
 This package is intended to offer something as great as JSON... trying to add something more.
+
+> The main reason why `NJSON` was born is to provide a way to serialize data much more complex than what `JSON` can
+> serialize, while maintaining the ability to copy and paste the serialized string into any JavaScript environment
+> without the need of any additional library - something I strongly want while debugging / developing.
 
 ## NJSON Features
 
@@ -65,6 +70,7 @@ This package is intended to offer something as great as JSON... trying to add so
 - &#10004; supports escaped new line in strings
 - &#10004; supports trailing commas
 - &#10004; supports circular and repeated references
+- &#10004; supports sparse arrays
 - &#10004; supports `undefined`
 - &#10004; supports `-0`, `NaN` and `Infinity`
 - &#10004; supports `BigInt`
@@ -76,51 +82,92 @@ This package is intended to offer something as great as JSON... trying to add so
 - &#10004; supports `TypedArray`s (but `Float16Array`)
 - &#10004; supports `URL`
 
-# Example
+## Example
 
 <!-- prettier-ignore-start -->
 
 ```javascript
 const set = new Set();
-const arr = [set];
-const obj = { arr, nan: NaN, set };
+const arr = [, , NaN, , , set, , ,];
 
-arr.push(arr, obj);
-obj.obj = obj;
-set.add(arr).add(obj);
+arr.push(arr);
+set.add(arr).add(set);
 
-const serialized = NJSON.stringify(obj);
+const serialized = NJSON.stringify(arr);
 const parsed = NJSON.parse(serialized);
 
-console.log(parsed === parsed.obj);         // true
-console.log(parsed.arr === parsed.arr[1]);  // true
-console.log(isNaN(parsed.nan));             // true
-console.log(parsed.set instanceof Set);     // true
-console.log(parsed === [...parsed.set][1]); // true
+console.log(parsed === parsed[8]);         // true
+console.log(Object.hasOwn(parsed, 7));     // false
+console.log(isNaN(parsed[2]));             // true
+console.log(parsed[5] instanceof Set);     // true
+console.log(parsed === [...parsed[5]][0]); // true
 console.log(serialized);
-// ((A,B,C)=>Object.assign(B,{"arr":Object.assign(A,{"0":C.add(A).add(B),"1":A,"2":B}),"set":C,"obj":B}))([],{"nan":NaN},new Set())
+// ((A,B)=>Object.assign(B,{"5":A.add(B).add(A),"8":B}))(new Set(),[,,NaN])
 ```
 
 <!-- prettier-ignore-end -->
 
-## Comparison with alternatives
+# Table of content
 
-| Feature                  | JSON     | flatted  | devalue  | superjson | **NJSON** |
-| ------------------------ | -------- | -------- | -------- | --------- | --------- |
-| Safe: no `eval` use      | &#10004; | &#10004; | &#10004; | &#10004;  | &#10004;  |
-| `eval` compliant \*      | &#10004; | &#10060; | &#10060; | &#10060;  | &#10004;  |
-| Circular / repeated refs | &#10060; | &#10004; | &#10004; | &#10004;  | &#10004;  |
-| `Map` / `Set`            | &#10060; | &#10060; | &#10004; | &#10004;  | &#10004;  |
-| `BigInt`                 | &#10060; | &#10060; | &#10004; | &#10004;  | &#10004;  |
-| `Date`                   | &#10060; | &#10060; | &#10004; | &#10004;  | &#10004;  |
-| `RegExp`                 | &#10060; | &#10060; | &#10004; | &#10004;  | &#10004;  |
-| `TypedArray`s            | &#10060; | &#10060; | &#10004; | &#10060;  | &#10004;  |
-| Preserves `undefined`    | &#10060; | &#10060; | &#10004; | &#10004;  | &#10004;  |
+- [Documentation](#documentation)
+  - [NJSON extends JSON](#njson-extends-json)
+  - [NJSON parser](#njson-parser)
+  - [Usage](#usage)
+    - [JavaScript](#javascript)
+    - [TypeScript](#typescript)
+  - [Polyfills](#polyfills)
+    - [Server side](#server-side)
+    - [Client side](#client-side)
+  - [Not supported by design](#not-supported-by-design)
+    - [ArrayBuffer](#arraybuffer)
+    - [Function](#function)
+    - [Symbol](#symbol)
+    - [TypedArray](#typedarray)
+  - [The `Error` exception](#the-error-exception)
+  - [replacer / reviver](#replacer--reviver)
+    - [Array](#array)
+    - [Map](#map)
+    - [Set](#set)
+    - [TypedArray](#typedarray-1)
+  - [circular / repeated references](#circular--repeated-references)
+  - [Versions](#versions)
+    - [v0.5.0](#v050)
+    - [v0.5.1](#v051)
+  - [Installation](#installation)
+  - [MIME type](#mime-type)
+- [API reference](#api-reference)
+  - [NJSON.empty](#njsonempty)
+  - [NJSON.parse(text[, reviver])](#njsonparsetext-reviver)
+  - [NJSON.parse(text[, options])](#njsonparsetext-options)
+  - [NJSON.stringify(value[, replacer[, space]])](#njsonstringifyvalue-replacer-space)
+  - [NJSON.stringify(value[, options])](#njsonstringifyvalue-options)
+  - [interface NjsonParseOptions](#interface-njsonparseoptions)
+    - [NjsonParseOptions.numberKey](#njsonparseoptionsnumberkey)
+    - [NjsonParseOptions.reviver](#njsonparseoptionsreviver)
+  - [interface NjsonStringifyOptions](#interface-njsonstringifyoptions)
+    - [NjsonStringifyOptions.date](#njsonstringifyoptionsdate)
+    - [NjsonStringifyOptions.numberKey](#njsonstringifyoptionsnumberkey-1)
+    - [NjsonStringifyOptions.omitStack](#njsonstringifyoptionsomitstack)
+    - [NjsonStringifyOptions.replacer](#njsonstringifyoptionsreplacer)
+    - [NjsonStringifyOptions.sortKeys](#njsonstringifyoptionssortkeys)
+    - [NjsonStringifyOptions.space](#njsonstringifyoptionsspace)
+    - [NjsonStringifyOptions.stringLength](#njsonstringifyoptionsstringlength)
+    - [NjsonStringifyOptions.undef](#njsonstringifyoptionsundef)
+  - [expressNJSON([options])](#expressnjsonoptions)
+  - [interface ExpressNjsonOptions](#interface-expressnjsonoptions)
+    - [ExpressNjsonOptions.parse](#expressnjsonoptionsparse)
+    - [ExpressNjsonOptions.stringify](#expressnjsonoptionsstringify)
+  - [Express.Response.njson(body[, options])](#expressresponsenjsonbody-options)
+  - [fetchNJSON([options])](#fetchnjsonoptions)
+  - [Response.njson([options])](#responsenjsonoptions)
+- [Compatibility](#compatibility)
+- [TypeScript](#typescript)
+- [License](#license)
+- [Bugs](#bugs)
+- [Donating](#donating)
+- [See also](#see-also)
 
-> \* This is the main reason why `NJSON` was born. The string produced by any other option strictly requires its own
-> parser to be converted back to the original value. As with `JSON`, the string produced by `NJSON` can be cut / pasted
-> in any JavaScript environment - without the need of any additional library - to reproduce the original value; a very
-> powerful feature while debugging / developing.
+# Documentation
 
 ## NJSON extends JSON
 
@@ -143,6 +190,62 @@ amount of times, with the same parameters and in the same order.
 
 Even if the **NJSON** serialized string is _JavaScript compliant_, `NJSON.parse` is not able to parse any JavaScript
 code, but only the subset produced by `NJSON.stringify` (otherwise it would have been another `eval` implementation).
+
+## Usage
+
+### JavaScript
+
+```javascript
+import { NJSON } from "next-json";
+
+const serialized = NJSON.stringify({ some: "value" });
+const deserialized = NJSON.parse(serialized);
+```
+
+### TypeScript
+
+```typescript
+import { NJSON, NjsonParseOptions, NjsonStringifyOptions } from "next-json";
+
+const serialized = NJSON.stringify({ some: "value" });
+const deserialized = NJSON.parse<{ some: string }>(serialized);
+```
+
+## Polyfills
+
+### Server side
+
+```javascript
+import express from "express";
+import { expressNJSON } from "next-json";
+
+const app = express();
+
+app.use(expressNJSON()); // install the polyfill
+app.post("/mirror", (req, res) => res.njson(req.body)); // there is an 'n' more than usual
+app.listen(3000);
+```
+
+### Client side
+
+```javascript
+import { NJSON, fetchNJSON } from "next-json";
+
+fetchNJSON(); // install the polyfill
+
+const payload = { infinity: Infinity };
+payload.circular = payload;
+
+const response = await fetch("http://localhost:3000/mirror", {
+  body: NJSON.stringify(payload), // there is an 'N' more than usual
+  headers: { "Content-Type": "application/njson" }, // there is an 'n' more than usual
+  method: "POST"
+});
+const body = await response.njson(); // there is an 'n' more than usual
+```
+
+Here `payload` deep equals `payload.circular`, which deep equals `body`, which deep equals `body.circular`, which deep
+equals `req.body` in server side, which deep equals `req.body.circular` in server side! &#127881;
 
 ## Not supported by design
 
@@ -201,7 +304,81 @@ The only option in my mind to avoid this exception is the use of `Object.defineP
 the complexity of the parser and the size of the produced serialized string. Maybe in the future... configurable
 through an option... if this can't be really tolerated.
 
-# Installation
+## replacer / reviver
+
+Even if `Date`, `RegExp`, `TypedArray`s and `URL` are `Object`s, they are treated as native values i.e. `replacer` and
+`reviver` will be never called with one of them as `this` context.
+
+### Array
+
+For `Array`s the `key` argument is a positive integer, but in a `String` form for `JSON` compatibility. This can be
+altered (i.e. in a `Number` form) through the `numberKey` option.
+
+**Sparse arrays:** When `JSON.stringify` processes a sparse array, it calls the `replacer` function with `undefined` as
+the value for missing elements. `NJSON` tries to maintain compatibility as much as possible by behaving the same way.
+However, if `undefined` (or any other value) were used in the same way, the serialized array could no longer be a
+sparse array. For this reason, `NJSON.empty` was introduced: a _pseudo-value_ used by `NJSON` to indicate that an array
+element is empty.
+
+### Map
+
+`Map`'s keys can be `Function`s and `Symbol`s; for `Map`s the `key` argument is a positive integer in a `Number` form
+and the `value` argument is the entry in the form `[mapKey, mapValue]`. This gives a way to _replace_/_revive_ keys
+which can't be serialized. If `replacer` or `reviver` do not return a two elements array, the value is omitted.
+
+### Set
+
+For `Set`s the `key` argument is a positive integer and it is passed in a `Number` form.
+
+### TypedArray
+
+Unlike `JSON`, `NJSON` does not call `replacer` and `reviver` for each element.
+
+## circular / repeated references
+
+Regardless of whether they are omitted, serialized as native values or not, every `Object`s (but `null`), `Function`s
+and `Symbol`s take part in the _repeated references algorithm_; long `String`s can take part as well (refer to
+[`NjsonStringifyOptions.stringLength`](#njsonstringifyoptionsstringlength) for details).<br />
+When a repeated reference is encountered, `replacer` and `reviver` are called against the reference, but it is not
+called recursively against its properties. If a property of a repeated reference is changed, the same change has effect
+in all other occurrences of the same reference.<br />
+Circular references are simply special cases of repeated references.
+
+## Versions
+
+Important changes introduced by versions.
+
+### v0.5.0
+
+`v0.5.0` changes the stringification of `Array`s from the use of `push` to the use `Object.assign` with some
+advantages:
+
+- enables the support of _sparse arrays_;
+
+- enables the use of _body-less functions_ rather than _functions_ which makes the parser thinner;
+
+and one disadvantage:
+
+- breaks the compatibility with previous versions stringification.
+
+To make the change as smooth as possible, `v0.5.0` still supports the deserialization of previous versions
+stringification (it maintains backward compatibility): support for parsing `push` will be removed in some later version
+TBD.
+
+> If `NJSON` is used to produce volatile values through `stringify` that are immediately parsed and discarded, no
+> actions are required.
+>
+> If some values stringified using `NJSON.version` < `v0.5.0` are stored (in some DBs or in some files), it is
+> recommended to convert them serialization to the newer format; to do that, just parse and re-stringify them using
+> `v0.5.0` <= `NJSON.version` < `TBD`).
+
+### v0.5.1
+
+`v0.5.1` introduces sparse arrays support. If sparse arrays need to be handled, it is mandatory to use this version.
+
+It is backward compatible.
+
+## Installation
 
 With [npm](https://www.npmjs.com/package/next-json):
 
@@ -209,67 +386,19 @@ With [npm](https://www.npmjs.com/package/next-json):
 npm install --save next-json
 ```
 
-# Usage
-
-### JavaScript
-
-```javascript
-import { NJSON } from "next-json";
-
-const serialized = NJSON.stringify({ some: "value" });
-const deserialized = NJSON.parse(serialized);
-```
-
-### TypeScript
-
-```typescript
-import { NJSON, NjsonParseOptions, NjsonStringifyOptions } from "next-json";
-
-const serialized = NJSON.stringify({ some: "value" });
-const deserialized = NJSON.parse<{ some: string }>(serialized);
-```
-
-# Polyfill
-
-## Server side
-
-```javascript
-import express from "express";
-import { expressNJSON } from "next-json";
-
-const app = express();
-
-app.use(expressNJSON()); // install the polyfill
-app.all("/mirror", (req, res) => res.njson(req.body)); // there is an 'n' more than usual
-app.listen(3000);
-```
-
-## Client side
-
-```javascript
-import { NJSON, fetchNJSON } from "next-json";
-
-fetchNJSON(); // install the polyfill
-
-const payload = { infinity: Infinity };
-payload.circular = payload;
-
-const response = await fetch("http://localhost:3000/mirror", {
-  body: NJSON.stringify(payload), // there is an 'N' more than usual
-  headers: { "Content-Type": "application/njson" }, // there is an 'n' more than usual
-  method: "POST"
-});
-const body = await response.njson(); // there is an 'n' more than usual
-```
-
-Here `payload` deep equals `payload.circular`, which deep equals `body`, which deep equals `body.circular`, which deep
-equals `req.body` in server side, which deep equals `req.body.circular` in server side! &#127881;
-
-# MIME type
+## MIME type
 
 The MIME type for NJSON format is: `application/njson` .
 
-# API
+# API reference
+
+## NJSON.empty
+
+A symbol used to indicate an empty value in an `Array` context. When a `replacer` or `reviver` function returns this
+symbol:
+
+- In an `Array` context: the element is removed from the array (creating or maintaining a sparse array)
+- Outside an `Array` context: a `TypeError` is thrown
 
 ## NJSON.parse(text[, reviver])
 
@@ -458,63 +587,6 @@ Parses the response body with [`NJSON.parse`](#njsonparsetext-options). Installe
   [`fetchNJSON`](#fetchnjsonoptions).
 - Returns: [&lt;unknown>](https://www.typescriptlang.org/docs/handbook/2/functions.html#unknown) The body parsed with
   [`NJSON.parse`](#njsonparsetext-options).
-
-# replacer / reviver
-
-Even if `Date`, `RegExp`, `TypedArray`s and `URL` are `Object`s, they are treated as native values i.e. `replacer` and
-`reviver` will be never called with one of them as `this` context.
-
-### Array
-
-For `Array`s the `key` argument is a positive integer, but in a `String` form for `JSON` compatibility. This can be
-altered (i.e. in a `Number` form) through the `numberKey` option.
-
-### Map
-
-`Map`'s keys can be `Function`s and `Symbol`s; for `Map`s the `key` argument is a positive integer in a `Number` form
-and the `value` argument is the entry in the form `[mapKey, mapValue]`. This gives a way to _replace_/_revive_ keys
-which can't be serialized. If `replacer` or `reviver` do not return a two elements array, the value is omitted.
-
-### Set
-
-For `Set`s the `key` argument is a positive integer and it is passed in a `Number` form.
-
-### TypedArray
-
-Unlike `JSON`, `NJSON` does not call `replacer` and `reviver` for each element.
-
-# circular / repeated references
-
-Regardless of whether they are omitted, serialized as native values or not, every `Object`s (but `null`), `Function`s
-and `Symbol`s take part in the _repeated references algorithm_; long `String`s can take part as well (refer to
-[`NjsonStringifyOptions.stringLength`](#njsonstringifyoptionsstringlength) for details).<br />
-When a repeated reference is encountered, `replacer` and `reviver` are called against the reference, but it is not
-called recursively against its properties. If a property of a repeated reference is changed, the same change has effect
-in all other occurrences of the same reference.<br />
-Circular references are simply special cases of repeated references.
-
-# Version 0.5.0
-
-`v0.5.0` changes the stringification of `Array`s from the use of `push` to the use `Object.assign` with some
-advantages:
-
-- enables the support of _sparse arrays_, next item in the TODO list;
-
-- enables the use of _body-less functions_ rather than _functions_ which makes the parser thinner;
-
-and one disadvantage:
-
-- breaks the compatibility with previous versions stringification.
-
-To make the change as smooth as possible, `v0.5.0` still supports the deserialization of previous versions
-stringification: support for parsing `push` will be removed in some later version TBD.
-
-> If `NJSON` is used to produce volatile values through `stringify` that are immediately parsed and discarded, no
-> actions are required.
->
-> If some values stringified using `NJSON.version` < `v0.5.0` are stored (in some DBs or in some files), it is
-> recommended to convert them serialization to the newer format (just parse and re-stringify them using `v0.5.0` <=
-> `NJSON.version` < `TBD`).
 
 # Compatibility
 

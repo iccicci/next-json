@@ -24,7 +24,20 @@ undefined = "undefined" { return undefined; }
 object = open_brace entries:(head:entry tail:(comma @entry)* comma? { return Object.fromEntries([head, ...tail]); })? closed_brace { return entries || {}; }
 entry  = name:string wss ":" wss value:value { return [name, value]; }
 
-array = open_square values:(head:value tail:(comma @value)* comma? { return [head, ...tail]; })? closed_square { return values || []; }
+value_or_empty = (value:value { return { value }; }) / (wss { return { empty: true }; })
+
+array = open_square values:(head:value_or_empty tail:(comma @value_or_empty)* { return [head, ...tail] })? closed_square
+  {
+    if(! values) return [];
+
+    if(values.length && values[values.length - 1].empty) values.pop();
+
+    const arr = new Array(values.length);
+
+    for(let i = 0; i < values.length; i++) if(! values[i].empty) arr[i] = values[i].value;
+
+    return arr;
+  }
 
 bigint "bigint" = natural:natural "n" { return BigInt(natural); }
 
@@ -170,7 +183,7 @@ function = open_round parameters "=>" wss body closed_round arguments
 
       const ret = peg$parse(statement[0], options);
 
-      if(ret instanceof Array) return ret[0];
+      if(Array.isArray(ret)) return ret[0];
     }
   }
 

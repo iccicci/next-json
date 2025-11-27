@@ -6,33 +6,32 @@
   ],
   "description": "Next JavaScript Object Notation",
   "devDependencies": {
-    "@stylistic/eslint-plugin": "5.2.3",
-    "@types/express": "5.0.3",
-    "@types/jest": "29.5.14",
-    "@types/node": "24.3.0",
-    "eslint": "9.34.0",
-    "eslint-plugin-import": "2.32.0",
-    "eslint-plugin-simple-import-sort": "12.1.1",
-    "eslint-plugin-sort-keys": "2.3.5",
-    "express": "5.1.0",
-    "jest": "29.7.0",
-    "jest-environment-node-single-context": "29.4.0",
-    "peggy": "5.0.6",
-    "prettier": "3.6.2",
-    "ts-jest": "29.4.1",
-    "ts-pegjs": "4.2.1",
-    "tsx": "4.20.5",
-    "typescript": "5.9.2",
-    "typescript-eslint": "8.41.0"
+    "@stylistic/eslint-plugin": "^5.6.1",
+    "@types/express": "^5.0.5",
+    "@types/node": "^24.10.1",
+    "@vitest/coverage-v8": "^4.0.14",
+    "eslint": "^9.39.1",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-simple-import-sort": "^12.1.1",
+    "eslint-plugin-sort-keys": "^2.3.5",
+    "express": "^5.2.0",
+    "peggy": "^5.0.6",
+    "prettier": "^3.7.3",
+    "ts-pegjs": "^4.2.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.48.0",
+    "vitest": "^4.0.14",
+    "yarn-upgrade-all": "^0.7.5"
   },
   "engines": {
     "node": ">=14.0"
   },
   "exports": {
     ".": {
+      "types": "./dist/types/index.d.ts",
       "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.js",
-      "types": "./dist/types/index.d.ts"
+      "require": "./dist/cjs/index.js"
     }
   },
   "funding": {
@@ -79,16 +78,17 @@
   "repository": "https://github.com/iccicci/next-json",
   "scripts": {
     "build": "make build",
-    "coverage": "TZ=Europe/Rome jest --coverage",
+    "coverage": "TZ=Europe/Rome vitest run --coverage",
     "deploy": "make deploy",
     "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
+    "packages": "yarn-upgrade-all --ignore-workspace-root-check",
     "parser": "typescript",
     "precoverage": "make",
     "pretest": "make",
-    "test": "TZ=Europe/Rome jest"
+    "test": "TZ=Europe/Rome vitest run"
   },
   "sideEffects": false,
   "type": "module",
   "types": "./dist/types/index.d.ts",
-  "version": "0.5.0"
+  "version": "0.5.1"
 }

@@ -52,10 +52,10 @@ describe("NJSON", () => {
     const replacer_reviver = function(key: number | string, value: unknown) {
       return value;
     };
-    const replacer1 = jest.fn(replacer_reviver);
-    const replacer2 = jest.fn(replacer_reviver);
-    const reviver1 = jest.fn(replacer_reviver);
-    const reviver2 = jest.fn(replacer_reviver);
+    const replacer1 = vi.fn(replacer_reviver);
+    const replacer2 = vi.fn(replacer_reviver);
+    const reviver1 = vi.fn(replacer_reviver);
+    const reviver2 = vi.fn(replacer_reviver);
 
     expect(NJSON.stringify(value, { omitStack: true, replacer: replacer1 })).toBe(plain);
     expect(NJSON.stringify(value, { numberKey: true, omitStack: true, replacer: replacer2, space: 2 })).toBe(space);
@@ -307,11 +307,143 @@ describe("NJSON", () => {
     const error5 = Object.assign(fakeStack(new Error("njson")), { njson: "njson" });
 
     check("with custom property", error5, 'Object.assign(new Error("njson"),{"stack":"Error: njson\\n    njson stack","njson":"njson"})', undefined, "njson", "Error", "Error: njson\n    njson stack");
+
+    const unused = () => "unused";
+    const error6 = Object.assign(fakeStack(new Error("test")), { unused, unused2: unused });
+
+    check("with repeated function", error6, 'Object.assign(new Error("test"),{"stack":"Error: test\\n    njson stack"})', undefined, "test", "Error", "Error: test\n    njson stack");
   });
 
   describe("trailing commas", () => {
     it("in object", () => expect(NJSON.parse('{"json":"test","test":"json",}')).toEqual({ json: "test", test: "json" }));
     it("in array", () => expect(NJSON.parse("[1,2,3,]")).toEqual([1, 2, 3]));
     it("in push", () => expect(NJSON.parse("((A)=>{A.push(1,2,3,);return A})([])")).toEqual([1, 2, 3]));
+  });
+
+  describe("sparse arrays", () => {
+    const properties = (array: unknown[], length: number, properties: number[]) => {
+      if(array.length !== length) throw new Error(`Array length mismatch: ${array.length} !== ${length}`);
+
+      for(let i = 0; i < length; ++i)
+        if(properties.includes(i)) {
+          if(! Object.hasOwn(array, i)) throw new Error(`Property ${i} is not defined`);
+        } else if(Object.hasOwn(array, i)) throw new Error(`Property ${i} is defined`);
+    };
+
+    describe("simple 0", () => {
+      const sparse = [1, , 3];
+
+      describe("plain", () => {
+        const stringified = "[1,,3]";
+
+        it("stringified", () => expect(NJSON.stringify(sparse)).toBe(stringified));
+        it("parsed", () => expect(NJSON.parse(stringified)).toStrictEqual(sparse));
+        it("evaluated", () => expect(eval(`(${stringified})`)).toStrictEqual(sparse));
+        it("properties", () => properties(NJSON.parse(stringified), 3, [0, 2]));
+      });
+
+      describe("indented", () => {
+        const stringified = "[\n  1,\n  ,\n  3\n]";
+
+        it("stringified", () => expect(NJSON.stringify(sparse, { space: 2 })).toBe(stringified));
+        it("parsed", () => expect(NJSON.parse(stringified)).toStrictEqual(sparse));
+        it("evaluated", () => expect(eval(`(${stringified})`)).toStrictEqual(sparse));
+      });
+    });
+
+    describe("simple 1", () => {
+      const sparse = [1, , 3, ,];
+
+      describe("plain", () => {
+        const stringified = "[1,,3,,]";
+
+        it("stringified", () => expect(NJSON.stringify(sparse)).toBe(stringified));
+        it("parsed", () => expect(NJSON.parse(stringified)).toStrictEqual(sparse));
+        it("evaluated", () => expect(eval(`(${stringified})`)).toStrictEqual(sparse));
+        it("properties", () => properties(NJSON.parse(stringified), 4, [0, 2]));
+      });
+
+      describe("indented", () => {
+        const stringified = "[\n  1,\n  ,\n  3,\n  ,\n]";
+
+        it("stringified", () => expect(NJSON.stringify(sparse, { space: 2 })).toBe(stringified));
+        it("parsed", () => expect(NJSON.parse(stringified)).toStrictEqual(sparse));
+        it("evaluated", () => expect(eval(`(${stringified})`)).toStrictEqual(sparse));
+      });
+    });
+
+    describe("simple 2", () => {
+      const sparse = [1, , 3, , ,];
+
+      describe("plain", () => {
+        const stringified = "[1,,3,,,]";
+
+        it("stringified", () => expect(NJSON.stringify(sparse)).toBe(stringified));
+        it("parsed", () => expect(NJSON.parse(stringified)).toStrictEqual(sparse));
+        it("evaluated", () => expect(eval(`(${stringified})`)).toStrictEqual(sparse));
+        it("properties", () => properties(NJSON.parse(stringified), 5, [0, 2]));
+      });
+
+      describe("indented", () => {
+        const stringified = "[\n  1,\n  ,\n  3,\n  ,\n  ,\n]";
+
+        it("stringified", () => expect(NJSON.stringify(sparse, { space: 2 })).toBe(stringified));
+        it("parsed", () => expect(NJSON.parse(stringified)).toStrictEqual(sparse));
+        it("evaluated", () => expect(eval(`(${stringified})`)).toStrictEqual(sparse));
+      });
+    });
+
+    describe("circular in the middle", () => {
+      const sparse: unknown[] = [, , 1, , 3, , , , ,];
+      const stringified = '((A)=>Object.assign(A,{"6":A}))([,,1,,3,,,,,])';
+
+      sparse[6] = sparse;
+
+      it("stringified", () => expect(NJSON.stringify(sparse)).toBe(stringified));
+      it("parsed", () => expect(NJSON.parse(stringified)).toStrictEqual(sparse));
+      it("evaluated", () => expect(eval(`(${stringified})`)).toStrictEqual(sparse));
+      it("properties", () => properties(NJSON.parse(stringified), 9, [2, 4, 6]));
+    });
+
+    describe("circular at the end", () => {
+      const sparse: unknown[] = [, , 1, , 3, , , , ,];
+      const stringified = '((A)=>Object.assign(A,{"9":A}))([,,1,,3])';
+
+      sparse.push(sparse);
+
+      it("stringified", () => expect(NJSON.stringify(sparse)).toBe(stringified));
+      it("parsed", () => expect(NJSON.parse(stringified)).toStrictEqual(sparse));
+      it("evaluated", () => expect(eval(`(${stringified})`)).toStrictEqual(sparse));
+      it("properties", () => properties(NJSON.parse(stringified), 10, [2, 4, 9]));
+    });
+
+    describe("empty", () => {
+      describe("replacer", () => {
+        const replacer = (key: number | string, value: unknown) => (key === "1" ? NJSON.empty : value);
+
+        it("correct", () => {
+          expect(NJSON.stringify([1, 2, 3], replacer)).toBe("[1,,3]");
+        });
+
+        it("wrong", () => {
+          expect(() => NJSON.stringify({ "1": 1 }, replacer)).toThrow("NJSON.empty can be used only in an Array context");
+        });
+      });
+
+      describe("reviver", () => {
+        const reviver = (key: number | string, value: unknown) => (key === "1" ? NJSON.empty : value);
+
+        it("correct", () => {
+          const parsed = NJSON.parse<unknown[]>("[1,2,3]", reviver);
+
+          expect(parsed).toStrictEqual([1, , 3]);
+          expect(properties(parsed, 3, [0, 2]));
+        });
+
+        it("wrong", () => {
+          expect(() => NJSON.parse('{"1":1}', reviver)).toThrow("NJSON.empty can be used only in an Array context");
+        });
+      });
+    });
   });
 });
