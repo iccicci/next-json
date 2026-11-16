@@ -127,13 +127,13 @@ typed_array =
   "Uint16Array"       wss open_round elements:integer_array? closed_round { return elements ? new Uint16Array(elements)       : new Uint16Array();       } /
   "Int32Array"        wss open_round elements:natural_array? closed_round { return elements ? new Int32Array(elements)        : new Int32Array();        } /
   "Uint32Array"       wss open_round elements:integer_array? closed_round { return elements ? new Uint32Array(elements)       : new Uint32Array();       } /
-  "Float32Array"      wss open_round elements:float_array?   closed_round { return elements ? new Float32Array(elements)      : new Float32Array();      } /
-  "Float64Array"      wss open_round elements:float_array?   closed_round { return elements ? new Float64Array(elements)      : new Float64Array();      } /
+  "Float32Array"      wss open_round elements:number_array?  closed_round { return elements ? new Float32Array(elements)      : new Float32Array();      } /
+  "Float64Array"      wss open_round elements:number_array?  closed_round { return elements ? new Float64Array(elements)      : new Float64Array();      } /
   "BigInt64Array"     wss open_round elements:bigint_array?  closed_round { return elements ? new BigInt64Array(elements)     : new BigInt64Array();     } /
   "BigUint64Array"    wss open_round elements:bigint_array?  closed_round { return elements ? new BigUint64Array(elements)    : new BigUint64Array();    }
 
 bigint_array  = open_square values:(head:bigint wss     tail:(comma @bigint wss    )* { return [head, ...tail]; })? closed_square { return values || []; }
-float_array   = open_square values:(head:float  wss     tail:(comma @float  wss    )* { return [head, ...tail]; })? closed_square { return values || []; }
+number_array  = open_square values:(head:number wss     tail:(comma @number wss    )* { return [head, ...tail]; })? closed_square { return values || []; }
 integer_array = open_square values:(head:parsed_integer tail:(comma @parsed_integer)* { return [head, ...tail]; })? closed_square { return values || []; }
 natural_array = open_square values:(head:parsed_natural tail:(comma @parsed_natural)* { return [head, ...tail]; })? closed_square { return values || []; }
 

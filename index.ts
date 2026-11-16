@@ -446,13 +446,10 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
           const id = typedArrays.findIndex(_ => value instanceof _);
 
           if(id !== -1) {
-            const {
-              name,
-              // eslint-disable-next-line @typescript-eslint/unbound-method
-              prototype: { toString }
-            } = typedArrays[id];
+            const { name } = typedArrays[id];
             const bigint = value instanceof BigInt64Array || value instanceof BigUint64Array;
-            const stringified = toString.call(value);
+            const float = value instanceof Float32Array || value instanceof Float64Array;
+            const stringified = float ? Array.from(value as Float32Array | Float64Array, _ => (Object.is(_, -0) ? "-0" : _.toString())).join(",") : typedArrays[id].prototype.toString.call(value);
 
             rest = nativeRef(stringified.length ? `new ${name}([${bigint ? `${stringified.replace(/,/g, "n,")}n` : stringified}])` : `new ${name}()`);
           } else {

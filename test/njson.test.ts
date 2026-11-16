@@ -35,6 +35,23 @@ describe("NJSON", () => {
 
   it("TypedArray", () => expect(NJSON.stringify([new ArrayBuffer(0), new Uint8Array([23, 42]), new BigInt64Array([23n, 42n])])).toBe("[{},new Uint8Array([23,42]),new BigInt64Array([23n,42n])]"));
 
+  it("Float*Array NaN Infinity -0", () => {
+    const values = [NaN, Infinity, -Infinity, -0];
+    const f32 = new Float32Array(values);
+    const f64 = new Float64Array(values);
+    const s32 = NJSON.stringify(f32);
+    const s64 = NJSON.stringify(f64);
+
+    expect(s32).toBe("new Float32Array([NaN,Infinity,-Infinity,-0])");
+    expect(s64).toBe("new Float64Array([NaN,Infinity,-Infinity,-0])");
+    expect(NJSON.parse(s32)).toEqual(f32);
+    expect(NJSON.parse(s64)).toEqual(f64);
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+    expect(Object.is((NJSON.parse(s32) as Float32Array)[3], -0)).toBe(true);
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+    expect(Object.is((NJSON.parse(s64) as Float64Array)[3], -0)).toBe(true);
+  });
+
   it("complex case", () => {
     const plain = readFileSync("./test/plain.njson").toString().replace(/\n$/, "");
     const space = readFileSync("./test/space.njson").toString().replace(/\n$/, "");

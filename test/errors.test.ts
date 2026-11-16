@@ -21,7 +21,7 @@ const tests: Record<string, [string, string]> = {
   "bad set method":               ["((A)=>{A.set(1,1)})(1)", 'Can\'t call method "set" on Number at 1:10'],
   "bad unicode":                  ['"\\u12"', "Invalid Unicode escape sequence at 1:6"],
   "bad url":                      ['\nnew\nURL(\n   "njson")', version === "14" ? "Invalid URL: njson at 4:4" : "Invalid URL at 4:4"],
-  "bigint in Float32Array":       ["new Float32Array([10n])", 'Expected ",", ".", "]", [0-9], or [eE] but "n" found at 1:21'],
+  "bigint in Float32Array":       ["new Float32Array([10n])", 'Expected "," or "]" but "n" found at 1:21'],
   "bigint in Int8Array":          ["new Int8Array([10n])", 'Expected ",", "]", or [0-9] but "n" found at 1:18'],
   "bigint in Uint16Array":        ["new Uint16Array([10n])", 'Expected ",", "]", or [0-9] but "n" found at 1:20'],
   "chained add to push":          ["((A)=>{A.push(1).add(1)})([])", 'Can\'t call method "add" on Number at 1:18'],
