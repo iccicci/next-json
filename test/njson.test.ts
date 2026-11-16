@@ -154,7 +154,7 @@ describe("NJSON", () => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } catch(e: any) {
             // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-            throw new Error(`${e.message} parsing '${str}'`);
+            throw new Error(`${e.message} parsing '${str}'`, { cause: e });
           }
         });
 

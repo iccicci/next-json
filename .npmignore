@@ -1,11 +1,13 @@
 .*
 *.tgz
 Makefile
+codecov.yml
 coverage
+eslint.config.js
 generate.ts
 index.ts
-jest.config.cjs
 next-json.pegjs
 parser.ts
 test
 tsconfig.*
+vitest.config.ts

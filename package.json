@@ -6,23 +6,26 @@
   ],
   "description": "Next JavaScript Object Notation",
   "devDependencies": {
-    "@stylistic/eslint-plugin": "^5.6.1",
-    "@types/express": "^5.0.5",
-    "@types/node": "^24.10.1",
-    "@vitest/coverage-v8": "^4.0.14",
-    "eslint": "^9.39.1",
+    "@eslint/js": "^10.0.1",
+    "@stylistic/eslint-plugin": "^6.0.1",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.6",
+    "@vitest/coverage-v8": "^5.1.0",
+    "eslint": "^10.15.0",
     "eslint-plugin-import": "^2.32.0",
-    "eslint-plugin-simple-import-sort": "^12.1.1",
+    "eslint-plugin-simple-import-sort": "^14.0.0",
     "eslint-plugin-sort-keys": "^2.3.5",
-    "express": "^5.2.0",
-    "peggy": "^5.0.6",
-    "prettier": "^3.7.3",
-    "ts-pegjs": "^4.2.1",
-    "tsx": "^4.21.0",
-    "typescript": "^5.9.3",
-    "typescript-eslint": "^8.48.0",
-    "vitest": "^4.0.14",
-    "yarn-upgrade-all": "^0.7.5"
+    "express": "^5.3.0",
+    "globals": "^17.14.0",
+    "npm-check-updates": "23.1.1",
+    "peggy": "^5.1.1",
+    "prettier": "^3.10.1",
+    "ts-pegjs": "^4.2.3",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.2",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0"
   },
   "engines": {
     "node": ">=14.0"
@@ -75,13 +78,18 @@
     "useTabs": false
   },
   "readmeFilename": "README.md",
-  "repository": "https://github.com/iccicci/next-json",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iccicci/next-json.git"
+  },
   "scripts": {
+    "all": "yarn coverage && yarn eslint",
     "build": "make build",
     "coverage": "TZ=Europe/Rome vitest run --coverage",
     "deploy": "make deploy",
-    "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
-    "packages": "yarn-upgrade-all --ignore-workspace-root-check",
+    "deps": "npm-check-updates -t minor -u && yarn && npm-check-updates -t latest",
+    "eslint": "eslint",
+    "npm-check-updates": "23.1.1",
     "parser": "typescript",
     "precoverage": "make",
     "pretest": "make",
@@ -90,5 +98,5 @@
   "sideEffects": false,
   "type": "module",
   "types": "./dist/types/index.d.ts",
-  "version": "0.5.1"
+  "version": "0.5.2"
 }

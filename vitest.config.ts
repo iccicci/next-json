@@ -7,7 +7,8 @@ export default defineConfig({
   test: {
     coverage: {
       include:  ["index.ts", ...(process.env.PARSER ? ["parser.ts"] : [])],
-      provider: "v8"
+      provider: "v8",
+      reporter: ["text", "text-summary", "html", "lcov", "clover", "json"]
     },
     environment: "node",
     globals:     true,

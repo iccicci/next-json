@@ -16,7 +16,7 @@
     "strictNullChecks": true,
     "strictPropertyInitialization": true,
     "target": "es2020",
-    "types": ["vitest/globals"]
+    "types": ["node", "vitest/globals"]
   },
   "include": ["./*.ts", "./test/*.ts"]
 }

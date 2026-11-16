@@ -1,3 +1,7 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import js from "@eslint/js";
 import stylistic from "@stylistic/eslint-plugin";
 import { defineConfig } from "eslint/config";
@@ -7,20 +11,31 @@ import sortKeys from "eslint-plugin-sort-keys";
 import globals from "globals";
 import tsEslint from "typescript-eslint";
 
+const rootDir = dirname(fileURLToPath(import.meta.url));
+const tsconfigEslint = JSON.parse(readFileSync(join(rootDir, "tsconfig.eslint.json"), "utf8"));
+
 const overrides = { for: { after: false }, if: { after: false }, switch: { after: false }, while: { after: false } };
 const unusedVarsOptions = { argsIgnorePattern: "^_", caughtErrors: "none", ignoreRestSiblings: true };
 
-export default defineConfig(
-  { ignores: ["coverage", "dist", "parser.ts"] },
+// Single source of truth for linted paths: tsconfig.eslint.json `include`
+const typeCheckedFiles = tsconfigEslint.include.filter(pattern => pattern !== "eslint.config.js");
+
+export default defineConfig([
+  {
+    ignores: ["coverage/**", "dist/**", "parser.ts"]
+  },
+  {
+    files: ["eslint.config.js"],
+    languageOptions: { ecmaVersion: 2020, globals: globals.node }
+  },
   {
     extends:         [js.configs.recommended, ...tsEslint.configs.strictTypeChecked, ...tsEslint.configs.recommendedTypeChecked, ...tsEslint.configs.stylisticTypeChecked],
-    files:           ["**/*.{cjs,js,mjs,ts}"],
+    files:           typeCheckedFiles,
     languageOptions: {
       ecmaVersion:   2020,
       globals:       globals.browser,
       parserOptions: {
-        projectService:  { allowDefaultProject: ["eslint.config.mjs", "jest.config.cjs"], defaultProject: "tsconfig.json" },
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        project:         ["./tsconfig.eslint.json"],
         tsconfigRootDir: import.meta.dirname
       }
     },
@@ -69,4 +84,4 @@ export default defineConfig(
       "space-unary-ops":                                           ["error", { nonwords: false, overrides: { "!": true }, words: true }]
     }
   }
-);
+]);
