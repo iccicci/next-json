@@ -75,7 +75,7 @@ This package is intended to offer something as great as JSON... trying to add so
 - &#10004; supports `Map`
 - &#10004; supports `RegExp`
 - &#10004; supports `Set`
-- &#10004; supports `TypedArray`s (but `Float16Array`)
+- &#10004; supports `TypedArray`s
 - &#10004; supports `URL`
 
 ## Example
@@ -148,6 +148,7 @@ console.log(serialized);
     - [NjsonStringifyOptions.sortKeys](#njsonstringifyoptionssortkeys)
     - [NjsonStringifyOptions.space](#njsonstringifyoptionsspace)
     - [NjsonStringifyOptions.stringLength](#njsonstringifyoptionsstringlength)
+    - [NjsonStringifyOptions.typedAsBuffer](#njsonstringifyoptionstypedasbuffer)
     - [NjsonStringifyOptions.undef](#njsonstringifyoptionsundef)
   - [expressNJSON([options])](#expressnjsonoptions)
   - [interface ExpressNjsonOptions](#interface-expressnjsonoptions)
@@ -271,8 +272,12 @@ between distinct systems is something almost meaningless.
 ### TypedArray
 
 **Note:** except for `Int8Array`, `Uint8Array` and `Uint8ClampedArray`, `TypedArray`s are platform dependant: they are
-supported (but `Float16Array` as it is not supported by **Node.js**), but trying to transfer one of them between
-different architectures may be source of unexpected problems.
+supported, but trying to transfer one of them between different architectures may be source of unexpected problems.
+
+By default `TypedArray`s are serialized from their underlying bytes as
+`new T(Uint8Array.fromBase64("...").buffer)` (see
+[`NjsonStringifyOptions.typedAsBuffer`](#njsonstringifyoptionstypedasbuffer)); the parser also accepts the
+element-list form `new T([ ... ])`.
 
 ## The `Error` exception
 
@@ -478,6 +483,9 @@ parameter of `JSON.parse`. See also [replacer / reviver](#replacer--reviver) for
 - [`stringLength`](#njsonstringifyoptionsstringlength):
   [&lt;number>](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#Number_type) | `null` Makes
   `String`s to be treated as references. **Default:** `null`.
+- [`typedAsBuffer`](#njsonstringifyoptionstypedasbuffer):
+  [&lt;boolean>](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#Boolean_type)
+  Specifies how `TypedArray`s are serialized. **Default:** `true`.
 - [`undef`](#njsonstringifyoptionsundef):
   [&lt;boolean>](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#Boolean_type)
   Specifies the `undefined` behavior. **Default:** `true`.
@@ -523,6 +531,36 @@ parameter of `JSON.serialize`.
 
 If specified, `String`s which `length` is greater or equal to the specified value take part in the _repeated references
 algorithm_.
+
+### NjsonStringifyOptions.typedAsBuffer
+
+For default `NJSON.stringify` serializes `TypedArray`s from their underlying bytes:
+
+```js
+new Float64Array(Uint8Array.fromBase64(base64).buffer);
+```
+
+where `base64` is produced with:
+
+```js
+new Uint8Array(typedArray.buffer, typedArray.byteOffset, typedArray.byteLength).toBase64();
+```
+
+If set to `false`, `TypedArray`s are serialized as element lists instead (for example
+`new Float64Array([NaN,Infinity,-0])`). `NJSON.parse` accepts both forms.
+
+The default (`true`) requires `Uint8Array.prototype.toBase64` / `Uint8Array.fromBase64` (Node.js **v22+** or
+compatible runtimes). If you need to serialize a float `TypedArray` on a platform that does not support those APIs,
+set `typedAsBuffer` to `false`.
+
+Setting `typedAsBuffer` to `false` can be dangerous for float `TypedArray`s: `NaN` has multiple valid binary
+representations under IEEE 754, so going through the element-list form may be lossy (distinct NaN bit patterns collapse
+to a single `NaN` value). See MDN on
+[Number encoding](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number#number_encoding)
+and
+[observably distinct NaN values](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/NaN#observably_distinct_nan_values).
+
+For multi-byte types, the default buffer form also depends on the platform endianness.
 
 ### NjsonStringifyOptions.undef
 
@@ -589,6 +627,12 @@ Parses the response body with [`NJSON.parse`](#njsonparsetext-options). Installe
 Requires **Node.js v14**.
 
 **Exception:** [`fetchNJSON`](#fetchnjsonoptions) requires **Node.js v18**.
+
+**Exception:** when serializing `TypedArray`s, default [`typedAsBuffer`](#njsonstringifyoptionstypedasbuffer)
+serialization requires **Node.js v22** (or another runtime with `Uint8Array.prototype.toBase64` /
+`Uint8Array.fromBase64`). On unsupported platforms, set `{ typedAsBuffer: false }`. When float `TypedArray`s
+must be serialized that way, there is the further issue that the element-list form can be lossy for `NaN`
+payloads (see [`typedAsBuffer`](#njsonstringifyoptionstypedasbuffer)).
 
 The package is tested under [all Node.js versions](https://github.com/iccicci/next-json/actions/workflows/build.yml)
 currently supported accordingly to [Node.js Release](https://github.com/nodejs/Release#readme).

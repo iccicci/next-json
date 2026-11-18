@@ -42,6 +42,12 @@ export interface NjsonStringifyOptions {
   /** When a `string` is longer than `stringLength` characters it is considered a reference. */
   stringLength?: number;
 
+  /**
+   * If `true`, `TypedArray`s are serialized as `new T(Uint8Array.fromBase64(...).buffer)`.
+   * If `false`, they are serialized as `new T([element, ...])`.
+   */
+  typedAsBuffer?: boolean;
+
   /** If `false`, `undefined` values ar skipped (as JSON.stringify does). */
   undef?: boolean;
 }
@@ -214,8 +220,16 @@ const nativeRef = function(stringified: string) {
   return { argument, stringified, stringify };
 };
 
+const numberToString = (value: boolean | number) => (Object.is(value, -0) ? "-0" : value.toString());
+
 const errors = [EvalError, RangeError, ReferenceError, SyntaxError, TypeError, URIError];
-const typedArrays = [BigInt64Array, BigUint64Array, Float32Array, Float64Array, Int8Array, Int16Array, Int32Array, Uint8Array, Uint8ClampedArray, Uint16Array, Uint32Array];
+const typedArrays = [BigInt64Array, BigUint64Array, global.Float16Array, Float32Array, Float64Array, Int8Array, Int16Array, Int32Array, Uint8Array, Uint8ClampedArray, Uint16Array, Uint32Array].filter(
+  _ => typeof _ === "function"
+);
+
+const isBigIntArray = (value: unknown): value is BigInt64Array | BigUint64Array => value instanceof BigInt64Array || value instanceof BigUint64Array;
+const isFloatArray = (value: unknown): value is Float16Array | Float32Array | Float64Array =>
+  (typeof Float16Array === "function" && value instanceof Float16Array) || value instanceof Float32Array || value instanceof Float64Array;
 
 /**
  * Converts a JavaScript value to a Next JavaScript Object Notation (NJSON) string.
@@ -243,6 +257,7 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
   let sortKeys = false;
   let stringLength: number | undefined = undefined;
   let stringifyDate: (value: Date) => string = value => value.getTime().toString();
+  let typedAsBuffer = true;
   let undef = true;
 
   if(options) {
@@ -259,6 +274,7 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
         if(typeof options.stringLength === "number") stringLength = options.stringLength;
         if(options.omitStack === true) omitStack = true;
         if(options.sortKeys === true) sortKeys = true;
+        if(options.typedAsBuffer === false) typedAsBuffer = false;
         if(options.undef === false) undef = false;
 
         if(typeof options.replacer === "function") replacer = options.replacer;
@@ -446,12 +462,19 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
           const id = typedArrays.findIndex(_ => value instanceof _);
 
           if(id !== -1) {
+            const typed = value as ArrayBufferView & { length: number };
             const { name } = typedArrays[id];
-            const bigint = value instanceof BigInt64Array || value instanceof BigUint64Array;
-            const float = value instanceof Float32Array || value instanceof Float64Array;
-            const stringified = float ? Array.from(value as Float32Array | Float64Array, _ => (Object.is(_, -0) ? "-0" : _.toString())).join(",") : typedArrays[id].prototype.toString.call(value);
 
-            rest = nativeRef(stringified.length ? `new ${name}([${bigint ? `${stringified.replace(/,/g, "n,")}n` : stringified}])` : `new ${name}()`);
+            if(! typed.byteLength) rest = nativeRef(`new ${name}()`);
+            else if(typedAsBuffer) {
+              const base64 = new Uint8Array(typed.buffer, typed.byteOffset, typed.byteLength).toBase64();
+
+              rest = nativeRef(`new ${name}(Uint8Array.fromBase64(${JSON.stringify(base64)}).buffer)`);
+            } else {
+              const stringified = isFloatArray(value) ? Array.from(value, numberToString).join(",") : Array.prototype.join.call(value, ",");
+
+              rest = nativeRef(`new ${name}([${isBigIntArray(value) ? `${stringified.replace(/,/g, "n,")}n` : stringified}])`);
+            }
           } else {
             const args: [string, ReplacerRef][] = [];
             const elements: [string, ReplacerRef][] = [];
@@ -650,7 +673,7 @@ function stringify(value: unknown, options?: NjsonStringifyOptions | NjsonReplac
       return nativeRef(`${value.toString()}n`);
     case "boolean":
     case "number":
-      return nativeRef(Object.is(value, -0) ? "-0" : value.toString());
+      return nativeRef(numberToString(value));
     case "object":
       return nativeRef("null");
     case "string":

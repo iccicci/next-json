@@ -352,8 +352,8 @@ const tests: Record<string, RefTest> = {
 
 const check = function(name: string, value: unknown, stringified: string) {
   describe(name, () => {
-    it("to be", () => expect(NJSON.stringify(value, { stringLength: 10 })).toBe(stringified));
-    it("evaluated", () => expect(NJSON.stringify(eval(`(${stringified})`), { stringLength: 10 })).toBe(stringified));
+    it("to be", () => expect(NJSON.stringify(value, { stringLength: 10, typedAsBuffer: false })).toBe(stringified));
+    it("evaluated", () => expect(NJSON.stringify(eval(`(${stringified})`), { stringLength: 10, typedAsBuffer: false })).toBe(stringified));
   });
 };
 
@@ -364,7 +364,7 @@ describe("references", () => {
       const legacy = readFileSync(`./test/references/${name}.legacy.njson`).toString();
       const replacer = vi.fn(test.replacer.func);
       const reviver = vi.fn(test.reviver.func);
-      const options = { replacer, space: 2, stringLength: 10 };
+      const options = { replacer, space: 2, stringLength: 10, typedAsBuffer: false };
 
       const stringified = NJSON.stringify(test.value, options);
 

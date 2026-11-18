@@ -1,6 +1,32 @@
 // NJSON Next-JSON Grammar
 // Based on https://github.com/peggyjs/peggy/blob/main/examples/json.pegjs
 
+{
+  const typedArrayConstructors: Record<string, new (arg?: ArrayBuffer | ArrayLike<bigint | number>) => ArrayBufferView> = {
+    BigInt64Array,
+    BigUint64Array,
+    Float32Array,
+    Float64Array,
+    Int8Array,
+    Int16Array,
+    Int32Array,
+    Uint8Array,
+    Uint8ClampedArray,
+    Uint16Array,
+    Uint32Array
+  };
+
+  if(typeof Float16Array === "function") typedArrayConstructors.Float16Array = Float16Array;
+
+  function makeTypedArray(name: string, arg?: ArrayBuffer | ArrayLike<bigint | number> | string) {
+    const Ctor = typedArrayConstructors[name];
+
+    if(typeof Ctor !== "function") throw new TypeError(`${name} is not supported in this environment`);
+
+    return new Ctor(! arg ? undefined : typeof arg === "string" ? Uint8Array.fromBase64(arg).buffer : arg);
+  }
+}
+
 NJSON = wss @(value / function)
 
 ws  "white space"  = [ \t\n\r] / "//" [^\n]* [\n] / "/*" (!"*/" .)* "*/"
@@ -120,17 +146,21 @@ map_entry       = open_square key:value comma value:value closed_square { return
 array_map_entry = open_square values:(head:map_entry tail:(comma @map_entry)* { return [head, ...tail]; })? closed_square { return values || []; }
 
 typed_array =
-  "Int8Array"         wss open_round elements:natural_array? closed_round { return elements ? new Int8Array(elements)         : new Int8Array();         } /
-  "Uint8Array"        wss open_round elements:integer_array? closed_round { return elements ? new Uint8Array(elements)        : new Uint8Array();        } /
-  "Uint8ClampedArray" wss open_round elements:integer_array? closed_round { return elements ? new Uint8ClampedArray(elements) : new Uint8ClampedArray(); } /
-  "Int16Array"        wss open_round elements:natural_array? closed_round { return elements ? new Int16Array(elements)        : new Int16Array();        } /
-  "Uint16Array"       wss open_round elements:integer_array? closed_round { return elements ? new Uint16Array(elements)       : new Uint16Array();       } /
-  "Int32Array"        wss open_round elements:natural_array? closed_round { return elements ? new Int32Array(elements)        : new Int32Array();        } /
-  "Uint32Array"       wss open_round elements:integer_array? closed_round { return elements ? new Uint32Array(elements)       : new Uint32Array();       } /
-  "Float32Array"      wss open_round elements:number_array?  closed_round { return elements ? new Float32Array(elements)      : new Float32Array();      } /
-  "Float64Array"      wss open_round elements:number_array?  closed_round { return elements ? new Float64Array(elements)      : new Float64Array();      } /
-  "BigInt64Array"     wss open_round elements:bigint_array?  closed_round { return elements ? new BigInt64Array(elements)     : new BigInt64Array();     } /
-  "BigUint64Array"    wss open_round elements:bigint_array?  closed_round { return elements ? new BigUint64Array(elements)    : new BigUint64Array();    }
+  "Int8Array"         wss open_round arg:(typed_array_buffer / natural_array)? closed_round { return makeTypedArray("Int8Array", arg);         } /
+  "Uint8Array"        wss open_round arg:(typed_array_buffer / integer_array)? closed_round { return makeTypedArray("Uint8Array", arg);        } /
+  "Uint8ClampedArray" wss open_round arg:(typed_array_buffer / integer_array)? closed_round { return makeTypedArray("Uint8ClampedArray", arg); } /
+  "Int16Array"        wss open_round arg:(typed_array_buffer / natural_array)? closed_round { return makeTypedArray("Int16Array", arg);        } /
+  "Uint16Array"       wss open_round arg:(typed_array_buffer / integer_array)? closed_round { return makeTypedArray("Uint16Array", arg);       } /
+  "Int32Array"        wss open_round arg:(typed_array_buffer / natural_array)? closed_round { return makeTypedArray("Int32Array", arg);        } /
+  "Uint32Array"       wss open_round arg:(typed_array_buffer / integer_array)? closed_round { return makeTypedArray("Uint32Array", arg);       } /
+  "Float16Array"      wss open_round arg:(typed_array_buffer / number_array)?  closed_round { return makeTypedArray("Float16Array", arg);      } /
+  "Float32Array"      wss open_round arg:(typed_array_buffer / number_array)?  closed_round { return makeTypedArray("Float32Array", arg);      } /
+  "Float64Array"      wss open_round arg:(typed_array_buffer / number_array)?  closed_round { return makeTypedArray("Float64Array", arg);      } /
+  "BigInt64Array"     wss open_round arg:(typed_array_buffer / bigint_array)?  closed_round { return makeTypedArray("BigInt64Array", arg);     } /
+  "BigUint64Array"    wss open_round arg:(typed_array_buffer / bigint_array)?  closed_round { return makeTypedArray("BigUint64Array", arg);    }
+
+typed_array_buffer =
+  "Uint8Array" wss dot "fromBase64" wss open_round b64:string closed_round wss dot "buffer" wss { return b64; }
 
 bigint_array  = open_square values:(head:bigint wss     tail:(comma @bigint wss    )* { return [head, ...tail]; })? closed_square { return values || []; }
 number_array  = open_square values:(head:number wss     tail:(comma @number wss    )* { return [head, ...tail]; })? closed_square { return values || []; }
@@ -139,13 +169,6 @@ natural_array = open_square values:(head:parsed_natural tail:(comma @parsed_natu
 
 parsed_integer = integer:integer wss { return parseFloat(integer); }
 parsed_natural = natural:natural wss { return parseFloat(natural); }
-
-small_number = value:number
-  {
-    if(typeof value === "bigint") throw peg$buildSimpleError("BigInt is not allowed for TypedArray.", location());
-
-    return value;
-  }
 
 object_assign = "Object" wss dot "assign" wss open_round dest:value comma source:value closed_round
   {

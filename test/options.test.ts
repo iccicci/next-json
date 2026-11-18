@@ -3,6 +3,7 @@ import { NJSON } from "../index";
 const match = process.version.match(/^v([0-9]+)\./);
 const version = match ? parseInt(match[1], 10) : 0;
 const v18it = version >= 18 ? it : it.skip;
+const toBase64it = typeof Uint8Array.prototype.toBase64 === "function" ? it : it.skip;
 
 describe("options", () => {
   describe("NJSON.parse", () => {
@@ -179,6 +180,26 @@ describe("options", () => {
     it("string space", () => {
       expect(NJSON.stringify(spaceValue, null, " \t ")).toBe(JSON.stringify(spaceValue, null, " \t "));
       expect(NJSON.stringify(spaceValue, { space: " \t " })).toBe(JSON.stringify(spaceValue, null, " \t "));
+    });
+
+    toBase64it("typedAsBuffer", () => {
+      const empty = new Uint8Array();
+      const values = [NaN, Infinity, -Infinity, -0];
+      const f64 = new Float64Array(values);
+      const u8 = new Uint8Array([23, 42]);
+      const base64 = new Uint8Array(f64.buffer, f64.byteOffset, f64.byteLength).toBase64();
+      const asBuffer = `new Float64Array(Uint8Array.fromBase64(${JSON.stringify(base64)}).buffer)`;
+      const asElements = "new Float64Array([NaN,Infinity,-Infinity,-0])";
+      const parsed = NJSON.parse<Float64Array>(asBuffer);
+
+      expect(NJSON.stringify(empty)).toBe("new Uint8Array()");
+      expect(NJSON.stringify(f64)).toBe(asBuffer);
+      expect(NJSON.stringify(f64, { typedAsBuffer: true })).toBe(asBuffer);
+      expect(NJSON.stringify(f64, { typedAsBuffer: false })).toBe(asElements);
+      expect(NJSON.stringify(u8, { typedAsBuffer: false })).toBe("new Uint8Array([23,42])");
+      expect(parsed).toEqual(f64);
+      expect(NJSON.parse(asElements)).toEqual(f64);
+      expect(Object.is(parsed[3], -0)).toBe(true);
     });
 
     it("undef", () => {

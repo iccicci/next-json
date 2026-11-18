@@ -2,6 +2,8 @@ import { readdirSync, readFileSync } from "fs";
 
 import { NJSON, NjsonStringifyOptions } from "../index";
 
+const float16it = typeof Float16Array === "function" ? it : it.skip;
+
 describe("NJSON", () => {
   describe("simple cases", () => {
     const dir = readdirSync("./test/njson").filter(_ => _.match(/\.njson$/));
@@ -25,22 +27,24 @@ describe("NJSON", () => {
       const output = (outputs.includes(_) ? readFileSync(`./test/njson/${_}.out.njson`).toString() : input).replace(/\n$/, "");
 
       it(_, () => {
-        expect(NJSON.stringify(eval(`(${input})`), { omitStack: true })).toBe(output);
-        expect(NJSON.stringify(NJSON.parse(input), { omitStack: true })).toBe(output);
+        expect(NJSON.stringify(eval(`(${input})`), { omitStack: true, typedAsBuffer: false })).toBe(output);
+        expect(NJSON.stringify(NJSON.parse(input), { omitStack: true, typedAsBuffer: false })).toBe(output);
       });
     });
   });
 
   it("escaped new line", () => expect(NJSON.parse('"\\\nn\\\nj\\\rs\\\r\no\\\n\\\rn\\\n\\\r\n\\\r"')).toBe("njson"));
 
-  it("TypedArray", () => expect(NJSON.stringify([new ArrayBuffer(0), new Uint8Array([23, 42]), new BigInt64Array([23n, 42n])])).toBe("[{},new Uint8Array([23,42]),new BigInt64Array([23n,42n])]"));
+  it("TypedArray", () =>
+    expect(NJSON.stringify([new ArrayBuffer(0), new Uint8Array([23, 42]), new BigInt64Array([23n, 42n])], { typedAsBuffer: false })).toBe("[{},new Uint8Array([23,42]),new BigInt64Array([23n,42n])]"));
 
   it("Float*Array NaN Infinity -0", () => {
     const values = [NaN, Infinity, -Infinity, -0];
     const f32 = new Float32Array(values);
     const f64 = new Float64Array(values);
-    const s32 = NJSON.stringify(f32);
-    const s64 = NJSON.stringify(f64);
+    const elements = { typedAsBuffer: false };
+    const s32 = NJSON.stringify(f32, elements);
+    const s64 = NJSON.stringify(f64, elements);
 
     expect(s32).toBe("new Float32Array([NaN,Infinity,-Infinity,-0])");
     expect(s64).toBe("new Float64Array([NaN,Infinity,-Infinity,-0])");
@@ -50,6 +54,29 @@ describe("NJSON", () => {
     expect(Object.is((NJSON.parse(s32) as Float32Array)[3], -0)).toBe(true);
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
     expect(Object.is((NJSON.parse(s64) as Float64Array)[3], -0)).toBe(true);
+  });
+
+  float16it("Float16Array", () => {
+    const values = [NaN, Infinity, -Infinity, -0, 1.5];
+    const f16 = new Float16Array(values);
+    const elements = { typedAsBuffer: false };
+    const asElements = "new Float16Array([NaN,Infinity,-Infinity,-0,1.5])";
+    const s16 = NJSON.stringify(f16, elements);
+    const parsed = NJSON.parse<Float16Array>(asElements);
+
+    expect(s16).toBe(asElements);
+    expect(parsed).toEqual(f16);
+    expect(Object.is(parsed[3], -0)).toBe(true);
+
+    if(typeof Uint8Array.prototype.toBase64 === "function") {
+      const base64 = new Uint8Array(f16.buffer, f16.byteOffset, f16.byteLength).toBase64();
+      const asBuffer = `new Float16Array(Uint8Array.fromBase64(${JSON.stringify(base64)}).buffer)`;
+
+      expect(NJSON.stringify(f16)).toBe(asBuffer);
+      expect(NJSON.parse(asBuffer)).toEqual(f16);
+    }
+
+    expect(NJSON.stringify(new Float16Array(), elements)).toBe("new Float16Array()");
   });
 
   it("complex case", () => {
@@ -74,8 +101,8 @@ describe("NJSON", () => {
     const reviver1 = vi.fn(replacer_reviver);
     const reviver2 = vi.fn(replacer_reviver);
 
-    expect(NJSON.stringify(value, { omitStack: true, replacer: replacer1 })).toBe(plain);
-    expect(NJSON.stringify(value, { numberKey: true, omitStack: true, replacer: replacer2, space: 2 })).toBe(space);
+    expect(NJSON.stringify(value, { omitStack: true, replacer: replacer1, typedAsBuffer: false })).toBe(plain);
+    expect(NJSON.stringify(value, { numberKey: true, omitStack: true, replacer: replacer2, space: 2, typedAsBuffer: false })).toBe(space);
 
     expect(replacer1.mock.calls).toStrictEqual([
       ["", value],
