@@ -5,9 +5,11 @@ Next JavaScript Object Notation
 [![Build Status][gha-badge]][gha-url]
 [![codecov][codecov-badge]][codecov-url]
 [![NPM version][npm-badge]][npm-url]
+
 [![Types][types-badge]][npm-url]
 [![Dependents][deps-badge]][deps-url]
 [![NPM downloads][npm-downloads-badge]][npm-url]
+
 [![Stars][stars-badge]][stars-url]
 [![Donate][donate-badge-ada]][donate-url-ada]
 [![Donate][donate-badge-btc]][donate-url-btc]
@@ -129,6 +131,7 @@ console.log(serialized);
   - [Versions](#versions)
     - [v0.5.0](#v050)
     - [v0.5.1](#v051)
+    - [v0.5.2](#v052)
   - [Installation](#installation)
   - [MIME type](#mime-type)
 - [API reference](#api-reference)
@@ -376,6 +379,14 @@ TBD.
 ### v0.5.1
 
 `v0.5.1` introduces sparse arrays support. If sparse arrays need to be handled, it is mandatory to use this version.
+
+It is backward compatible.
+
+### v0.5.2
+
+`v0.5.2` adds `Float16Array` support (when available) and the
+[`typedAsBuffer`](#njsonstringifyoptionstypedasbuffer) option: by default `TypedArray`s are serialized from their
+underlying bytes via `Uint8Array.fromBase64` / `toBase64`.
 
 It is backward compatible.
 
