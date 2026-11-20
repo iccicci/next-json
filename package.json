@@ -10,11 +10,11 @@
     "@stylistic/eslint-plugin": "^6.0.1",
     "@types/express": "^5.0.6",
     "@types/node": "^26.6.6",
-    "@vitest/coverage-v8": "^5.1.0",
+    "@vitest/coverage-v8": "^5.1.1",
     "eslint": "^10.15.0",
     "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-perfectionist": "^5.14.0",
     "eslint-plugin-simple-import-sort": "^14.0.0",
-    "eslint-plugin-sort-keys": "^2.3.5",
     "express": "^5.3.0",
     "globals": "^17.14.0",
     "npm-check-updates": "23.1.1",
@@ -23,9 +23,9 @@
     "ts-pegjs": "^4.2.3",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.72.2",
+    "typescript-eslint": "^8.73.0",
     "vite": "^8.3.8",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.1"
   },
   "engines": {
     "node": ">=14.0"
@@ -83,13 +83,12 @@
     "url": "git+https://github.com/iccicci/next-json.git"
   },
   "scripts": {
-    "all": "yarn coverage && yarn eslint",
+    "all": "yarn coverage && yarn eslint && yarn build",
     "build": "make build",
     "coverage": "TZ=Europe/Rome vitest run --coverage",
     "deploy": "make deploy",
     "deps": "npm-check-updates -t minor -u && yarn && npm-check-updates -t latest",
     "eslint": "eslint",
-    "npm-check-updates": "23.1.1",
     "parser": "typescript",
     "precoverage": "make",
     "pretest": "make",
@@ -98,5 +97,5 @@
   "sideEffects": false,
   "type": "module",
   "types": "./dist/types/index.d.ts",
-  "version": "0.5.2"
+  "version": "0.5.3"
 }

@@ -199,7 +199,7 @@ const long_strings = {
 };
 
 // repeated references
-const buffer = Buffer.from("njson");
+const buffer = Uint8Array.from("njson", _ => _.charCodeAt(0));
 const map6 = new Map();
 const set4 = new Set(["njson"]);
 const array6 = [new Set(), new Map(), buffer, map6, set4, buffer, map6, set4];

@@ -6,27 +6,28 @@ import js from "@eslint/js";
 import stylistic from "@stylistic/eslint-plugin";
 import { defineConfig } from "eslint/config";
 import _import from "eslint-plugin-import";
+import perfectionist from "eslint-plugin-perfectionist";
 import simpleImportSort from "eslint-plugin-simple-import-sort";
-import sortKeys from "eslint-plugin-sort-keys";
 import globals from "globals";
 import tsEslint from "typescript-eslint";
 
 const rootDir = dirname(fileURLToPath(import.meta.url));
-const tsconfigEslint = JSON.parse(readFileSync(join(rootDir, "tsconfig.eslint.json"), "utf8"));
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- JSON.parse
+const tsconfigEslint = /** @type {{ include: string[] }} */ (JSON.parse(readFileSync(join(rootDir, "tsconfig.eslint.json"), "utf8")));
 
 const overrides = { for: { after: false }, if: { after: false }, switch: { after: false }, while: { after: false } };
 const unusedVarsOptions = { argsIgnorePattern: "^_", caughtErrors: "none", ignoreRestSiblings: true };
 
 // Single source of truth for linted paths: tsconfig.eslint.json `include`
-const typeCheckedFiles = tsconfigEslint.include.filter(pattern => pattern !== "eslint.config.js");
+const typeCheckedFiles = tsconfigEslint.include;
 
 export default defineConfig([
   {
     ignores: ["coverage/**", "dist/**", "parser.ts"]
   },
   {
-    files: ["eslint.config.js"],
-    languageOptions: { ecmaVersion: 2020, globals: globals.node }
+    files:           ["eslint.config.js"],
+    languageOptions: { globals: globals.node }
   },
   {
     extends:         [js.configs.recommended, ...tsEslint.configs.strictTypeChecked, ...tsEslint.configs.recommendedTypeChecked, ...tsEslint.configs.stylisticTypeChecked],
@@ -39,7 +40,7 @@ export default defineConfig([
         tsconfigRootDir: import.meta.dirname
       }
     },
-    plugins: { "@stylistic": stylistic, import: _import, "simple-import-sort": simpleImportSort, "sort-keys": sortKeys },
+    plugins: { "@stylistic": stylistic, import: _import, perfectionist, "simple-import-sort": simpleImportSort },
     rules:   {
       "@stylistic/keyword-spacing":                                ["error", { after: true, before: true, overrides }],
       "@stylistic/space-before-function-paren":                    ["error", { anonymous: "never", asyncArrow: "always", catch: "never", named: "never" }],
@@ -72,15 +73,15 @@ export default defineConfig([
       "max-len":                                                   ["error", { code: 200, ignoreStrings: true }],
       "no-console":                                                "warn",
       "no-mixed-spaces-and-tabs":                                  ["error", "smart-tabs"],
+      "no-restricted-globals":                                     ["error", "global", "process", "Buffer", "require", "module", "exports", "__dirname", "__filename"],
       "no-sparse-arrays":                                          "off",
+      "perfectionist/sort-objects":                                ["error", { order: "asc", type: "alphabetical" }],
       "prefer-const":                                              ["error", { destructuring: "all" }],
       "prefer-template":                                           "error",
       quotes:                                                      ["error", "double", { avoidEscape: true }],
       semi:                                                        ["error", "always"],
       "simple-import-sort/exports":                                "error",
       "simple-import-sort/imports":                                "error",
-      "sort-keys":                                                 "off",
-      "sort-keys/sort-keys-fix":                                   "error",
       "space-unary-ops":                                           ["error", { nonwords: false, overrides: { "!": true }, words: true }]
     }
   }

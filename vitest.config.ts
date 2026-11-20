@@ -1,3 +1,5 @@
+/* eslint-disable no-restricted-globals */
+
 import { defineConfig } from "vitest/config";
 
 const match = process.version.match(/v(\d+)/);

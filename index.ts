@@ -223,9 +223,20 @@ const nativeRef = function(stringified: string) {
 const numberToString = (value: boolean | number) => (Object.is(value, -0) ? "-0" : value.toString());
 
 const errors = [EvalError, RangeError, ReferenceError, SyntaxError, TypeError, URIError];
-const typedArrays = [BigInt64Array, BigUint64Array, global.Float16Array, Float32Array, Float64Array, Int8Array, Int16Array, Int32Array, Uint8Array, Uint8ClampedArray, Uint16Array, Uint32Array].filter(
-  _ => typeof _ === "function"
-);
+const typedArrays = [
+  BigInt64Array,
+  BigUint64Array,
+  globalThis.Float16Array,
+  Float32Array,
+  Float64Array,
+  Int8Array,
+  Int16Array,
+  Int32Array,
+  Uint8Array,
+  Uint8ClampedArray,
+  Uint16Array,
+  Uint32Array
+].filter(_ => typeof _ === "function");
 
 const isBigIntArray = (value: unknown): value is BigInt64Array | BigUint64Array => value instanceof BigInt64Array || value instanceof BigUint64Array;
 const isFloatArray = (value: unknown): value is Float16Array | Float32Array | Float64Array =>
@@ -784,7 +795,7 @@ export const expressNJSON = function(options: ExpressNjsonOptions = {}) {
     req.on("data", (chunk: Buffer) => chunks.push(chunk));
     req.on("end", () => {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, no-restricted-globals
         req.body = NJSON.parse(Buffer.concat(chunks).toString(req.headers["content-encoding"] || "utf8"), parse);
         req._body = true;
         next();

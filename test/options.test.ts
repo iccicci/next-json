@@ -1,5 +1,6 @@
 import { NJSON } from "../index";
 
+// eslint-disable-next-line no-restricted-globals
 const match = process.version.match(/^v([0-9]+)\./);
 const version = match ? parseInt(match[1], 10) : 0;
 const v18it = version >= 18 ? it : it.skip;
